@@ -15,13 +15,14 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="max-w-2xl mx-auto p-8">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-            <h2 className="font-bold text-red-700 mb-2">Something broke in the UI</h2>
-            <pre className="text-xs text-red-600 whitespace-pre-wrap">
+          <div className="bg-red-50 border border-red-200 dark:bg-red-500/10 dark:border-red-500/25
+                          rounded-xl p-6">
+            <h2 className="font-bold text-red-700 dark:text-red-400 mb-2">Something broke in the UI</h2>
+            <pre className="text-xs text-red-600 dark:text-red-300 whitespace-pre-wrap">
               {this.state.error.message}
             </pre>
             <button onClick={() => this.setState({ error: null })}
-                    className="mt-4 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">
+                    className="btn btn-primary mt-4">
               Try again
             </button>
           </div>

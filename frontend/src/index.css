@@ -12,7 +12,8 @@ body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  @apply bg-slate-50 text-slate-800;
+  @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200;
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
 code, pre, .font-mono {
@@ -22,8 +23,15 @@ code, pre, .font-mono {
 /* slim professional scrollbars */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
-::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
+::-webkit-scrollbar-thumb { @apply bg-slate-300 dark:bg-slate-700 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-slate-400 dark:bg-slate-600; }
+
+/* star twinkle for the theme toggle */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.6); }
+}
+.animate-twinkle { animation: twinkle 1.8s ease-in-out infinite; }
 
 /* entrance animations */
 @keyframes fadeUp {
@@ -48,20 +56,24 @@ code, pre, .font-mono {
   100% { background-position: 400px 0; }
 }
 .skeleton {
-  @apply rounded-lg bg-slate-200;
+  @apply rounded-lg bg-slate-200 dark:bg-slate-800;
   background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
   background-size: 400px 100%;
   background-repeat: no-repeat;
   animation: shimmer 1.4s ease-in-out infinite;
 }
+.dark .skeleton {
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
 
 /* interactive card */
 .card {
-  @apply bg-white rounded-2xl border border-slate-200/70 shadow-sm;
-  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+  @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-sm;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease,
+              background-color 0.5s ease;
 }
 .card-hover:hover {
-  @apply shadow-md border-slate-300/80;
+  @apply shadow-md border-slate-300/80 dark:border-slate-700;
   transform: translateY(-1px);
 }
 
@@ -71,7 +83,26 @@ code, pre, .font-mono {
   transition: all 0.2s ease;
 }
 .btn:active { transform: scale(0.97); }
-.btn-primary { @apply bg-slate-900 text-white hover:bg-slate-700 shadow-sm; }
+.btn-primary { @apply bg-slate-900 text-white hover:bg-slate-700 shadow-sm
+                      dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200; }
 .btn-success { @apply bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm; }
 .btn-danger  { @apply bg-red-600 text-white hover:bg-red-500 shadow-sm; }
-.btn-ghost   { @apply bg-white text-slate-600 border border-slate-200 hover:bg-slate-50; }
+.btn-ghost   { @apply bg-white text-slate-600 border border-slate-200 hover:bg-slate-50
+                      dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800; }
+
+/* soft-tinted chips that read well in both themes */
+.chip-slate   { @apply bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300; }
+.chip-blue    { @apply bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300; }
+.chip-purple  { @apply bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300; }
+.chip-amber   { @apply bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300; }
+.chip-emerald { @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300; }
+.chip-red     { @apply bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300; }
+.chip-indigo  { @apply bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300; }
+
+/* headings + inputs */
+.h-page  { @apply text-slate-900 dark:text-white; }
+.input   { @apply rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
+                  transition-shadow
+                  dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200
+                  dark:focus:ring-white/10 dark:focus:border-slate-500; }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function Login() {
   const login = useAuth((s) => s.login);
@@ -49,7 +50,8 @@ export default function Login() {
       </div>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center p-8">
+      <div className="relative flex items-center justify-center p-8">
+        <div className="absolute top-6 right-6"><ThemeToggle /></div>
         <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-fade-up">
           <div className="lg:hidden flex items-center gap-2.5 mb-2">
             <span className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
@@ -58,23 +60,18 @@ export default function Login() {
             <span className="text-xl font-bold">ClearDesk</span>
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h2>
-            <p className="text-sm text-slate-500 mt-1">Sign in to the verification desk</p>
+            <h2 className="text-2xl font-bold tracking-tight h-page">Welcome back</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in to the verification desk</p>
           </div>
           <div className="space-y-3">
             <label className="block">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</span>
-              <input className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
-                                focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
-                                transition-shadow"
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email</span>
+              <input className="input mt-1.5 w-full"
                      value={email} onChange={(e) => setEmail(e.target.value)} />
             </label>
             <label className="block">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Password</span>
-              <input type="password"
-                     className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
-                                focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
-                                transition-shadow"
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Password</span>
+              <input type="password" className="input mt-1.5 w-full"
                      value={password} onChange={(e) => setPassword(e.target.value)} />
             </label>
           </div>
@@ -83,8 +80,8 @@ export default function Login() {
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? "Signing in…" : "Sign in"}
           </button>
-          <div className="card p-4 text-xs text-slate-500 space-y-1">
-            <p className="font-semibold text-slate-600">Demo accounts (password: demo1234)</p>
+          <div className="card p-4 text-xs text-slate-500 dark:text-slate-400 space-y-1">
+            <p className="font-semibold text-slate-600 dark:text-slate-300">Demo accounts (password: demo1234)</p>
             <p>uploader@cleardesk.dev — submits documents</p>
             <p>reviewer@cleardesk.dev — approves cases</p>
           </div>

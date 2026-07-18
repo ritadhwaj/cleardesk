@@ -3,10 +3,10 @@ import { ChevronDown } from "lucide-react";
 import type { AgentEvent } from "../api/client";
 
 const AGENT_STYLE: Record<string, { chip: string; align: string; avatar: string }> = {
-  doc_agent:   { chip: "bg-blue-50 text-blue-700",     align: "justify-start", avatar: "bg-blue-600" },
-  audit_agent: { chip: "bg-purple-50 text-purple-700", align: "justify-end",   avatar: "bg-purple-600" },
-  scorecard:   { chip: "bg-emerald-50 text-emerald-700", align: "justify-center", avatar: "bg-emerald-600" },
-  pipeline:    { chip: "bg-slate-100 text-slate-500",  align: "justify-center", avatar: "bg-slate-400" },
+  doc_agent:   { chip: "chip-blue",    align: "justify-start",  avatar: "bg-blue-600" },
+  audit_agent: { chip: "chip-purple",  align: "justify-end",    avatar: "bg-purple-600" },
+  scorecard:   { chip: "chip-emerald", align: "justify-center", avatar: "bg-emerald-600" },
+  pipeline:    { chip: "chip-slate",   align: "justify-center", avatar: "bg-slate-400 dark:bg-slate-600" },
 };
 
 const TYPE_ICON: Record<string, string> = {
@@ -40,7 +40,7 @@ export default function AgentFeed({ events }: { events: AgentEvent[] }) {
       <div ref={boxRef} onScroll={onScroll}
            className="card p-5 h-[480px] overflow-y-auto space-y-2.5">
         {events.length > RENDER_WINDOW && (
-          <p className="text-center text-xs text-slate-400">
+          <p className="text-center text-xs text-slate-400 dark:text-slate-500">
             {events.length - RENDER_WINDOW} earlier messages hidden
           </p>
         )}
@@ -53,19 +53,21 @@ export default function AgentFeed({ events }: { events: AgentEvent[] }) {
                                   font-bold flex items-center justify-center mt-0.5`}>
                   {e.agent === "doc_agent" ? "DA" : e.agent === "audit_agent" ? "AA" : "•"}
                 </span>
-                <div className={`rounded-2xl px-3.5 py-2.5 ${
-                    e.type === "error" ? "bg-red-50 border border-red-100" : "bg-slate-50"}`}>
+                <div className={`rounded-2xl px-3.5 py-2.5 transition-colors duration-500 ${
+                    e.type === "error"
+                      ? "bg-red-50 border border-red-100 dark:bg-red-500/10 dark:border-red-500/20"
+                      : "bg-slate-50 dark:bg-slate-800/70"}`}>
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${s.chip}`}>
                       {e.agent.replace("_", " ")}
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
                       {new Date(e.at).toLocaleTimeString(undefined,
                         { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                     </span>
                     <span className="text-xs">{TYPE_ICON[e.type] ?? ""}</span>
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed break-words">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed break-words">
                     {String(e.payload?.message ?? "")}
                   </p>
                 </div>
@@ -74,10 +76,10 @@ export default function AgentFeed({ events }: { events: AgentEvent[] }) {
           );
         })}
         {events.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-2">
             <span className="flex gap-1">
               {[0, 1, 2].map((i) => (
-                <span key={i} className="w-2 h-2 rounded-full bg-slate-300 animate-bounce"
+                <span key={i} className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce"
                       style={{ animationDelay: `${i * 150}ms` }} />
               ))}
             </span>
