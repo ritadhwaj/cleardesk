@@ -52,6 +52,8 @@ def review_action(case_id: uuid.UUID, body: ReviewActionIn,
                     context_note=body.note or "",
                 ))
 
+    case.updated_by = user.full_name
+
     if body.action == "APPROVE_CASE":
         case.status = "APPROVED"
     elif body.action == "REJECT_CASE":

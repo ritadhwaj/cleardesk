@@ -151,26 +151,39 @@ async def _process_upload(bus: AgentBus, up: models.Upload, fname: str,
 
 
 def _infer_process(case_id: str, doc_types: list[str]) -> None:
-    """Best-fit business process from what was uploaded — the user never told us."""
+    """Best-fit business process from what was uploaded — the user never told us.
+
+    Data-driven: scores every ProcessTemplate by how well the seen document
+    types cover its required docs (mandatory docs weigh most). Adding a new
+    bank service = adding a template row, no code changes.
+    """
     types = set(doc_types)
-    if types & {"PAYSLIP", "BANK_STMT", "ITR"}:
-        code, conf = "LOAN", 85.0 + 5.0 * len(types & {"PAYSLIP", "BANK_STMT", "ITR"})
-    elif types & {"PAN", "AADHAAR"}:
-        code, conf = "KYC", 90.0
-    else:
-        code, conf = "KYC", 40.0
     db = SessionLocal()
     try:
+        best, best_score = None, 0.0
+        for t in db.query(models.ProcessTemplate).all():
+            req = [r["doc_type"] for r in (t.required_docs or [])]
+            mand = [r["doc_type"] for r in (t.required_docs or []) if r.get("mandatory")]
+            if not req:
+                continue
+            overlap = len(types & set(req)) / len(req)
+            mand_hit = (len(types & set(mand)) / len(mand)) if mand else 0.5
+            # distinctive application forms are strong evidence
+            distinctive = 0.15 if any(d in types for d in mand if d.endswith("_FORM")) else 0.0
+            score = 0.55 * mand_hit + 0.30 * overlap + distinctive
+            if score > best_score:
+                best, best_score = t, score
+        conf = round(min(best_score * 100, 99.0), 1)
         case = db.query(models.Case).get(case_id)
-        template = db.query(models.ProcessTemplate).filter_by(code=code).first()
-        if case and template:
-            case.inferred_process_id = template.id
-            case.inference_confidence = min(conf, 99.0)
+        if case and best:
+            case.inferred_process_id = best.id
+            case.inference_confidence = conf
             db.commit()
+        label = best.code if best else "UNKNOWN"
     finally:
         db.close()
     emit(case_id, ME, "finding",
-         {"message": f"This bundle best fits: {code} ({min(conf, 99.0):.0f}% confidence)"})
+         {"message": f"This bundle best fits: {label} ({conf:.0f}% confidence)"})
 
 
 async def _handle(bus: AgentBus, msg: Message) -> None:

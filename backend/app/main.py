@@ -33,6 +33,7 @@ def on_startup() -> None:
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS ref_no VARCHAR(16)"))
         conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS name VARCHAR"))
+        conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS updated_by VARCHAR"))
     db = SessionLocal()
     try:
         for case in db.query(models.Case).filter(models.Case.ref_no.is_(None)).all():

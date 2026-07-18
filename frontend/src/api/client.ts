@@ -11,8 +11,22 @@ api.interceptors.request.use((config) => {
 
 // ---- typed helpers ----
 export interface CaseSummary {
-  id: string; ref_no: string; name: string; status: string; created_at: string;
+  id: string; ref_no: string; name: string; status: string;
+  created_by: string; updated_by: string;
+  created_at: string; updated_at: string;
 }
+
+/** dd-MMM-yyyy hh:mm:ss +TZ, in the viewer's timezone (backend sends UTC). */
+export const fmtDateTime = (iso: string) => {
+  if (!iso) return "—";
+  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mon = d.toLocaleString("en-GB", { month: "short" });
+  const time = d.toTimeString().slice(0, 8);
+  const tz = new Intl.DateTimeFormat("en", { timeZoneName: "shortOffset" })
+    .formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "";
+  return `${dd}-${mon}-${d.getFullYear()} ${time} ${tz}`;
+};
 export interface RunAudit {
   run_no: number; trigger: string; note: string | null;
   started_at: string | null; finished_at: string | null;

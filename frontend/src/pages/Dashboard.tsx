@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, FolderOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
-import { listCases, type CaseSummary } from "../api/client";
+import { listCases, fmtDateTime, type CaseSummary } from "../api/client";
 
 const STATUS_STYLE: Record<string, { chip: string; dot: string }> = {
   UPLOADED:   { chip: "chip-slate",   dot: "bg-slate-400" },
@@ -97,7 +97,9 @@ export default function Dashboard() {
             <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
               <th className="px-5 py-3.5">Case</th>
               <th className="px-5 py-3.5">Status</th>
-              <th className="px-5 py-3.5 hidden sm:table-cell">Created</th>
+              <th className="px-5 py-3.5 hidden md:table-cell">Created by</th>
+              <th className="px-5 py-3.5 hidden sm:table-cell">Created at</th>
+              <th className="px-5 py-3.5 hidden lg:table-cell">Last updated by</th>
               <th className="px-5 py-3.5 w-10" />
             </tr>
           </thead>
@@ -105,7 +107,7 @@ export default function Dashboard() {
             {cases === null &&
               [...Array(3)].map((_, i) => (
                 <tr key={i} className="border-b border-slate-50 dark:border-slate-800/60">
-                  <td className="px-5 py-4" colSpan={4}><div className="skeleton h-5 w-full" /></td>
+                  <td className="px-5 py-4" colSpan={6}><div className="skeleton h-5 w-full" /></td>
                 </tr>
               ))}
             {filtered.map((c, i) => (
@@ -125,9 +127,18 @@ export default function Dashboard() {
                   </Link>
                 </td>
                 <td className="px-5 py-4"><StatusBadge status={c.status} /></td>
-                <td className="px-5 py-4 hidden sm:table-cell text-slate-500 dark:text-slate-400">
-                  {new Date(c.created_at).toLocaleString(undefined,
-                    { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                <td className="px-5 py-4 hidden md:table-cell text-slate-600 dark:text-slate-300">
+                  {c.created_by}
+                </td>
+                <td className="px-5 py-4 hidden sm:table-cell text-slate-500 dark:text-slate-400
+                               font-mono text-xs whitespace-nowrap">
+                  {fmtDateTime(c.created_at)}
+                </td>
+                <td className="px-5 py-4 hidden lg:table-cell">
+                  <span className="block text-slate-600 dark:text-slate-300">{c.updated_by}</span>
+                  <span className="block font-mono text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    {fmtDateTime(c.updated_at)}
+                  </span>
                 </td>
                 <td className="px-5 py-4">
                   <Link to={`/cases/${c.id}`}
@@ -138,7 +149,7 @@ export default function Dashboard() {
               </tr>
             ))}
             {cases !== null && filtered.length === 0 && (
-              <tr><td colSpan={4} className="px-5 py-12 text-center text-slate-400">
+              <tr><td colSpan={6} className="px-5 py-12 text-center text-slate-400">
                 No cases {query ? "match your search" : "yet — create your first one"}.
               </td></tr>
             )}

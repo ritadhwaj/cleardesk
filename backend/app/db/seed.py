@@ -127,13 +127,101 @@ DOC_TYPES = [
     },
 ]
 
+# Compact definitions for the wider bank-service catalogue.
+def _t(code, display_name, fields):
+    return {"code": code, "display_name": display_name, "validity_rules": [],
+            "expected_fields": [{"name": n, "required": r} for n, r in fields]}
+
+DOC_TYPES += [
+    _t("ACCOUNT_FORM", "Account Opening Form",
+       [("name", True), ("dob", True), ("pan_number", True), ("aadhaar_number", False),
+        ("address", True), ("account_type", True), ("nominee", False)]),
+    _t("SIGNATURE_CARD", "Specimen Signature Card",
+       [("name", True), ("account_type", False)]),
+    _t("CC_FORM", "Credit Card Application",
+       [("name", True), ("pan_number", True), ("dob", False),
+        ("monthly_income", True), ("employer", False), ("card_variant", True)]),
+    _t("CAR_LOAN_FORM", "Car Loan Application",
+       [("name", True), ("vehicle_model", True), ("on_road_price", False),
+        ("loan_amount", True), ("monthly_income", True)]),
+    _t("VEHICLE_QUOTE", "Vehicle Quotation / Proforma Invoice",
+       [("customer", True), ("vehicle_model", True), ("on_road_price", True)]),
+    _t("PL_FORM", "Personal Loan Application",
+       [("name", True), ("pan_number", False), ("loan_amount", True),
+        ("purpose", True), ("monthly_income", True)]),
+    _t("BL_FORM", "Business Loan Application",
+       [("business_name", True), ("proprietor_name", True), ("gstin", True),
+        ("annual_turnover", True), ("loan_amount", True)]),
+    _t("GST_CERT", "GST Registration Certificate",
+       [("legal_name", True), ("trade_name", False), ("gstin", True), ("address", True)]),
+    _t("LOCKER_FORM", "Locker Facility Application",
+       [("name", True), ("account_number", True), ("locker_size", True), ("nominee", False)]),
+    _t("DEBIT_CARD_FORM", "Debit Card Request",
+       [("name", True), ("account_number", True), ("card_type", True)]),
+    _t("FASTAG_FORM", "FASTag Registration",
+       [("name", True), ("vehicle_number", True), ("vehicle_model", False), ("mobile", False)]),
+    _t("CHEQUE_BOOK_FORM", "Cheque Book Request",
+       [("name", True), ("account_number", True), ("leaves", True)]),
+    _t("REACTIVATION_FORM", "Dormant Account Reactivation",
+       [("name", True), ("account_number", True), ("reason", True), ("mobile", False)]),
+    _t("NACH_FORM", "NACH / Standing Instruction Mandate",
+       [("name", True), ("account_number", True), ("ifsc", True),
+        ("payee", True), ("amount", True), ("frequency", True)]),
+    _t("PASSBOOK_FORM", "Passbook Application",
+       [("name", True), ("account_number", True), ("request_type", False)]),
+    _t("ITR_ACK", "ITR Acknowledgement",
+       [("name", True), ("pan_number", True), ("acknowledgement_number", True),
+        ("assessment_year", True), ("total_income", False)]),
+    _t("FORM16", "Form 16 (TDS Certificate)",
+       [("name", True), ("pan_number", True), ("employer", True),
+        ("gross_salary", False), ("tds_deducted", False), ("period", False)]),
+    _t("PHOTO", "Applicant Photograph", [("photo_present", False)]),
+]
+
+
+def _p(code, name, docs, rules=None):
+    return {"code": code, "name": name,
+            "required_docs": [{"doc_type": d, "mandatory": m} for d, m in docs],
+            "rules": rules or [
+                {"rule_id": f"{code}-01",
+                 "description": "Applicant name consistent across all documents",
+                 "severity": "FAIL"}]}
+
+EXTRA_PROCESSES = [
+    _p("NEW_ACCOUNT", "New Account Opening",
+       [("ACCOUNT_FORM", True), ("PAN", True), ("AADHAAR", True),
+        ("PHOTO", False), ("SIGNATURE_CARD", False)]),
+    _p("CREDIT_CARD", "Credit Card Application",
+       [("CC_FORM", True), ("PAN", True), ("PAYSLIP", False)]),
+    _p("CAR_LOAN", "Car Loan Application",
+       [("CAR_LOAN_FORM", True), ("PAN", False), ("PAYSLIP", False), ("VEHICLE_QUOTE", False)]),
+    _p("PERSONAL_LOAN", "Personal Loan Application",
+       [("PL_FORM", True), ("PAN", False), ("PAYSLIP", True)]),
+    _p("BUSINESS_LOAN", "Business Loan (MSME)",
+       [("BL_FORM", True), ("GST_CERT", True), ("BANK_STMT", False)]),
+    _p("LOCKER", "Locker Facility Request",
+       [("LOCKER_FORM", True), ("PAN", False), ("PHOTO", False)]),
+    _p("DEBIT_CARD", "Debit Card Issuance", [("DEBIT_CARD_FORM", True)]),
+    _p("FASTAG", "FASTag Registration", [("FASTAG_FORM", True)]),
+    _p("CHEQUE_BOOK", "Cheque Book Request", [("CHEQUE_BOOK_FORM", True)]),
+    _p("DORMANT_REACT", "Dormant Account Reactivation",
+       [("REACTIVATION_FORM", True), ("PAN", True), ("AADHAAR", False)]),
+    _p("KYC_PARTIAL", "KYC Update (Partial)",
+       [("KYC_FORM", True), ("UTILITY_BILL", False)]),
+    _p("NACH_SI", "NACH / Standing Instruction Setup", [("NACH_FORM", True)]),
+    _p("PASSBOOK", "Passbook Issue / Reissue", [("PASSBOOK_FORM", True)]),
+]
+
 
 def run() -> None:
     models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        if db.query(models.ProcessTemplate).count() == 0:
-            for t in (KYC_TEMPLATE, LOAN_TEMPLATE):
+        existing_p = {p.code for p in db.query(models.ProcessTemplate).all()}
+        TAX_TEMPLATE = _p("TAX", "Tax Filing Support",
+                          [("FORM16", True), ("ITR_ACK", False), ("PAN", False)])
+        for t in [KYC_TEMPLATE, LOAN_TEMPLATE, TAX_TEMPLATE] + EXTRA_PROCESSES:
+            if t["code"] not in existing_p:
                 db.add(models.ProcessTemplate(**t))
         # upsert doc types by code, so re-running seed adds newly defined ones
         existing = {t.code for t in db.query(models.DocTypeTemplate).all()}

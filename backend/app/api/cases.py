@@ -19,7 +19,7 @@ router = APIRouter()
 
 @router.post("")
 def create_case(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
-    case = models.Case(created_by=user.id, status="UPLOADED")
+    case = models.Case(created_by=user.id, status="UPLOADED", updated_by=user.full_name)
     db.add(case)
     db.commit()
     db.refresh(case)
@@ -62,6 +62,7 @@ def run_case(
     if not case:
         raise HTTPException(404, "Case not found")
     case.status = "PROCESSING"
+    case.updated_by = user.full_name
     run = models.CaseRun(case_id=case_id, run_no=1, trigger="INITIAL")
     db.add(run)
     db.commit()
@@ -110,6 +111,7 @@ def resubmit_case(
         models.Discrepancy.case_id == case_id).delete(synchronize_session=False)
 
     case.status = "PROCESSING"
+    case.updated_by = user.full_name
     db.commit()
     db.refresh(run)
     background.add_task(run_pipeline, str(case_id), str(run.id))
@@ -159,9 +161,14 @@ def list_cases(status: str | None = None, db: Session = Depends(get_db),
     q = db.query(models.Case)
     if status:
         q = q.filter(models.Case.status == status)
+    creators = {u.id: u.full_name for u in db.query(models.User).all()}
     return [
         {"id": str(c.id), "ref_no": c.ref_no, "name": c.name,
-         "status": c.status, "created_at": c.created_at.isoformat()}
+         "status": c.status,
+         "created_by": creators.get(c.created_by, "—"),
+         "updated_by": c.updated_by or creators.get(c.created_by, "—"),
+         "created_at": c.created_at.isoformat(),
+         "updated_at": (c.updated_at or c.created_at).isoformat()}
         for c in q.order_by(models.Case.created_at.desc()).all()
     ]
 

@@ -56,6 +56,7 @@ class Case(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     ref_no = Column(String(16), unique=True, index=True, default=generate_ref)
     name = Column(String, default="New Verification Case")
+    updated_by = Column(String, nullable=True)  # full name of last human actor
     status = Column(String, default="UPLOADED")
     # UPLOADED | PROCESSING | SCORED | IN_REVIEW | APPROVED | REJECTED | RETURNED
     inferred_process_id = Column(UUID(as_uuid=True), ForeignKey("process_templates.id"), nullable=True)
