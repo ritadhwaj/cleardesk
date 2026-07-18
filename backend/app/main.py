@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, cases, documents, reviews, ws
+from app.api import activity, auth, cases, documents, reviews, ws
 from app.db.session import engine
 from app.db import models
 
@@ -20,6 +20,7 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(cases.router, prefix="/cases", tags=["cases"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
+app.include_router(activity.router, prefix="/activity", tags=["activity"])
 app.include_router(ws.router, tags=["ws"])
 
 

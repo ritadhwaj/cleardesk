@@ -158,6 +158,21 @@ class ReviewAction(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ActivityLog(Base):
+    """Every human action in the system — the user-facing audit trail.
+    (agent_events covers what the AI did; this covers what PEOPLE did.)"""
+    __tablename__ = "activity_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), nullable=True)
+    user_name = Column(String)
+    case_id = Column(UUID(as_uuid=True), nullable=True)
+    case_ref = Column(String, nullable=True)
+    category = Column(String)   # AUTH | CASE | DOCUMENT | REVIEW | RETRY | EXPORT
+    action = Column(String)     # LOGIN, CASE_CREATED, FILES_UPLOADED, RUN_STARTED, ...
+    details = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class CaseRun(Base):
     """Audit of every pipeline run for a case (initial + retries).
 

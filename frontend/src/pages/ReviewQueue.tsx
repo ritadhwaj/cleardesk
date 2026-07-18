@@ -9,7 +9,8 @@ export default function ReviewQueue() {
 
   useEffect(() => {
     let live = true;
-    const load = () => listCases("IN_REVIEW").then((c) => live && setCases(c)).catch(() => {});
+    const load = () => listCases({ status: "IN_REVIEW", page_size: 50 })
+      .then((r) => live && setCases(r.items)).catch(() => {});
     load();
     const t = setInterval(load, 8000);
     return () => { live = false; clearInterval(t); };

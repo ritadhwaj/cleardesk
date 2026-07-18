@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { ShieldCheck, LayoutDashboard, FilePlus2, ClipboardCheck, LogOut } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, FilePlus2, ClipboardCheck, Activity, LogOut } from "lucide-react";
 import { useAuth } from "../store/auth";
 import ThemeToggle from "./ThemeToggle";
 
@@ -7,6 +7,7 @@ const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/cases/new", label: "New Case", icon: FilePlus2 },
   { to: "/review", label: "Review Queue", icon: ClipboardCheck },
+  { to: "/activity", label: "My Activity", icon: Activity },
 ];
 
 /** App shell: sticky glassy navbar + content area. */

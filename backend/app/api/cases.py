@@ -13,6 +13,7 @@ from app.db.session import get_db, SessionLocal
 from app.db import models
 from app.agents.orchestrator import run_pipeline
 from app.services.scoring import fields_map
+from app.services.activity import log_activity
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ def create_case(db: Session = Depends(get_db), user: models.User = Depends(curre
     db.add(case)
     db.commit()
     db.refresh(case)
+    log_activity(user, "CASE_CREATED", "CASE", f"Created case {case.ref_no}", case)
     return {"id": str(case.id), "status": case.status}
 
 
@@ -48,6 +50,8 @@ async def upload_files(
         db.add(upload)
         saved.append(f.filename)
     db.commit()
+    log_activity(user, "FILES_UPLOADED", "DOCUMENT",
+                 f"Uploaded {len(saved)} file(s): {', '.join(saved[:5])}", case)
     return {"saved": saved}
 
 
@@ -67,6 +71,8 @@ def run_case(
     db.add(run)
     db.commit()
     db.refresh(run)
+    log_activity(user, "RUN_STARTED", "CASE",
+                 f"Started agent verification (run #{run.run_no})", case)
     # The whole agent pipeline runs as a background task; progress streams over WS.
     background.add_task(run_pipeline, str(case_id), str(run.id))
     return {"status": "PROCESSING"}
@@ -114,6 +120,9 @@ def resubmit_case(
     case.updated_by = user.full_name
     db.commit()
     db.refresh(run)
+    log_activity(user, "CASE_RESUBMITTED", "RETRY",
+                 f"Resubmitted for retry #{run.run_no}"
+                 + (f' — "{body.note}"' if body.note else ""), case)
     background.add_task(run_pipeline, str(case_id), str(run.id))
     return {"status": "PROCESSING", "run_no": run.run_no}
 
@@ -130,12 +139,14 @@ def delete_upload(case_id: uuid.UUID, upload_id: uuid.UUID,
     up = db.query(models.Upload).get(upload_id)
     if not up or up.case_id != case_id:
         raise HTTPException(404, "Upload not found")
+    fname = Path(up.file_path).name
     try:
         Path(up.file_path).unlink(missing_ok=True)
     except OSError:
         pass
     db.delete(up)
     db.commit()
+    log_activity(user, "UPLOAD_DELETED", "DOCUMENT", f"Removed document '{fname}'", case)
     return {"ok": True}
 
 
@@ -151,26 +162,60 @@ def export_case(case_id: uuid.UUID, format: str = "xlsx",
         raise HTTPException(400, "format must be xlsx or pdf")
     data, media_type = build_export(db, case, format)
     fname = f"{export_filename()}.{format}"
+    log_activity(user, f"EXPORTED_{format.upper()}", "EXPORT",
+                 f"Exported case scorecard as {fname}", case)
     return Response(content=data, media_type=media_type,
                     headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @router.get("")
-def list_cases(status: str | None = None, db: Session = Depends(get_db),
+def list_cases(status: str | None = None, q: str | None = None,
+               created_by: str | None = None, updated_by: str | None = None,
+               page: int = 1, page_size: int = 10,
+               sort: str = "created_at", order: str = "desc",
+               db: Session = Depends(get_db),
                user: models.User = Depends(current_user)):
-    q = db.query(models.Case)
+    base = (db.query(models.Case, models.User.full_name)
+            .outerjoin(models.User, models.Case.created_by == models.User.id))
     if status:
-        q = q.filter(models.Case.status == status)
-    creators = {u.id: u.full_name for u in db.query(models.User).all()}
-    return [
-        {"id": str(c.id), "ref_no": c.ref_no, "name": c.name,
-         "status": c.status,
-         "created_by": creators.get(c.created_by, "—"),
-         "updated_by": c.updated_by or creators.get(c.created_by, "—"),
-         "created_at": c.created_at.isoformat(),
-         "updated_at": (c.updated_at or c.created_at).isoformat()}
-        for c in q.order_by(models.Case.created_at.desc()).all()
-    ]
+        base = base.filter(models.Case.status.ilike(f"%{status}%"))
+    if q:
+        base = base.filter((models.Case.name.ilike(f"%{q}%"))
+                           | (models.Case.ref_no.ilike(f"%{q}%")))
+    if created_by:
+        base = base.filter(models.User.full_name.ilike(f"%{created_by}%"))
+    if updated_by:
+        base = base.filter(models.Case.updated_by.ilike(f"%{updated_by}%"))
+
+    sort_map = {
+        "name": models.Case.name, "status": models.Case.status,
+        "created_at": models.Case.created_at, "updated_at": models.Case.updated_at,
+        "created_by": models.User.full_name, "updated_by": models.Case.updated_by,
+    }
+    col = sort_map.get(sort, models.Case.created_at)
+    base = base.order_by(col.desc() if order == "desc" else col.asc())
+
+    total = base.count()
+    rows = base.offset((max(page, 1) - 1) * page_size).limit(page_size).all()
+
+    all_cases = db.query(models.Case.status).all()
+    stats = {"total": len(all_cases),
+             "in_review": sum(1 for (s,) in all_cases if s == "IN_REVIEW"),
+             "approved": sum(1 for (s,) in all_cases if s == "APPROVED")}
+
+    return {
+        "items": [
+            {"id": str(c.id), "ref_no": c.ref_no, "name": c.name,
+             "status": c.status,
+             "created_by": creator or "—",
+             "updated_by": c.updated_by or creator or "—",
+             "created_at": c.created_at.isoformat(),
+             "updated_at": (c.updated_at or c.created_at).isoformat()}
+            for c, creator in rows
+        ],
+        "total": total,
+        "stats": stats,
+    }
 
 
 @router.get("/{case_id}")

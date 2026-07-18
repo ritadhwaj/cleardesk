@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, FolderOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
+import { FolderOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import { listCases, fmtDateTime, type CaseSummary } from "../api/client";
+import DataTable, { type Column } from "../components/DataTable";
 
 const STATUS_STYLE: Record<string, { chip: string; dot: string }> = {
   UPLOADED:   { chip: "chip-slate",   dot: "bg-slate-400" },
@@ -23,27 +24,62 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const COLUMNS: Column<CaseSummary>[] = [
+  {
+    key: "name", label: "Case", sortable: true, filter: "text",
+    render: (c) => (
+      <Link to={`/cases/${c.id}`} className="group block">
+        <span className="block font-medium text-slate-700 dark:text-slate-200
+                         group-hover:text-slate-900 dark:group-hover:text-white">
+          {c.name || "Verification Case"}
+        </span>
+        <span className="block font-mono text-[11px] tracking-wider text-slate-400 dark:text-slate-500">
+          {c.ref_no}
+        </span>
+      </Link>
+    ),
+  },
+  {
+    key: "status", label: "Status", sortable: true,
+    filter: { options: ["UPLOADED", "PROCESSING", "IN_REVIEW", "APPROVED", "REJECTED", "RETURNED"] },
+    render: (c) => <StatusBadge status={c.status} />,
+  },
+  {
+    key: "created_by", label: "Created by", sortable: true, filter: "text",
+    className: "hidden sm:table-cell",
+    render: (c) => (
+      <>
+        <span className="block text-slate-600 dark:text-slate-300">{c.created_by}</span>
+        <span className="block font-mono text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+          {fmtDateTime(c.created_at)}
+        </span>
+      </>
+    ),
+  },
+  {
+    key: "updated_by", label: "Last updated by", sortable: true, filter: "text",
+    className: "hidden lg:table-cell",
+    render: (c) => (
+      <>
+        <span className="block text-slate-600 dark:text-slate-300">{c.updated_by}</span>
+        <span className="block font-mono text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+          {fmtDateTime(c.updated_at)}
+        </span>
+      </>
+    ),
+  },
+  {
+    key: "open", label: "", className: "w-10",
+    render: (c) => (
+      <Link to={`/cases/${c.id}`} className="text-slate-300 hover:text-slate-600 transition-colors">
+        <ArrowRight size={16} />
+      </Link>
+    ),
+  },
+];
+
 export default function Dashboard() {
-  const [cases, setCases] = useState<CaseSummary[] | null>(null);
-  const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    let live = true;
-    const load = () => listCases().then((c) => live && setCases(c)).catch(() => {});
-    load();
-    const t = setInterval(load, 8000); // background refresh keeps statuses current
-    return () => { live = false; clearInterval(t); };
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase();
-    return (cases ?? []).filter((c) =>
-      (c.ref_no ?? "").toLowerCase().includes(q) ||
-      (c.name ?? "").toLowerCase().includes(q) ||
-      c.status.toLowerCase().includes(q));
-  }, [cases, query]);
-
-  const stat = (s: string) => (cases ?? []).filter((c) => c.status === s).length;
+  const [stats, setStats] = useState<Record<string, number>>({});
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -59,20 +95,17 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { label: "Total cases", value: cases?.length, icon: FolderOpen, tint: "chip-slate" },
-          { label: "Awaiting review", value: stat("IN_REVIEW"), icon: Clock, tint: "chip-amber" },
-          { label: "Approved", value: stat("APPROVED"), icon: CheckCircle2, tint: "chip-emerald" },
+          { label: "Total cases", value: stats.total, icon: FolderOpen, tint: "chip-slate" },
+          { label: "Awaiting review", value: stats.in_review, icon: Clock, tint: "chip-amber" },
+          { label: "Approved", value: stats.approved, icon: CheckCircle2, tint: "chip-emerald" },
         ].map(({ label, value, icon: Icon, tint }, i) => (
           <div key={label} className="card p-5 animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-                <p className="text-3xl font-bold h-page mt-1">
-                  {cases === null ? "–" : value}
-                </p>
+                <p className="text-3xl font-bold h-page mt-1">{value ?? "–"}</p>
               </div>
               <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}>
                 <Icon size={20} />
@@ -82,77 +115,15 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* search */}
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input placeholder="Search by reference, name or status…" value={query}
-               onChange={(e) => setQuery(e.target.value)}
-               className="input w-full !pl-10" />
-      </div>
-
-      {/* case table */}
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
-              <th className="px-5 py-3.5">Case</th>
-              <th className="px-5 py-3.5">Status</th>
-              <th className="px-5 py-3.5 hidden sm:table-cell">Created by</th>
-              <th className="px-5 py-3.5 hidden lg:table-cell">Last updated by</th>
-              <th className="px-5 py-3.5 w-10" />
-            </tr>
-          </thead>
-          <tbody>
-            {cases === null &&
-              [...Array(3)].map((_, i) => (
-                <tr key={i} className="border-b border-slate-50 dark:border-slate-800/60">
-                  <td className="px-5 py-4" colSpan={5}><div className="skeleton h-5 w-full" /></td>
-                </tr>
-              ))}
-            {filtered.map((c, i) => (
-              <tr key={c.id} className="border-b border-slate-50 dark:border-slate-800/60 last:border-0
-                                        hover:bg-slate-50/70 dark:hover:bg-slate-800/40
-                                        transition-colors animate-fade-up"
-                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-                <td className="px-5 py-4">
-                  <Link to={`/cases/${c.id}`} className="group block">
-                    <span className="block font-medium text-slate-700 dark:text-slate-200
-                                     group-hover:text-slate-900 dark:group-hover:text-white">
-                      {c.name || "Verification Case"}
-                    </span>
-                    <span className="block font-mono text-[11px] tracking-wider text-slate-400 dark:text-slate-500">
-                      {c.ref_no}
-                    </span>
-                  </Link>
-                </td>
-                <td className="px-5 py-4"><StatusBadge status={c.status} /></td>
-                <td className="px-5 py-4 hidden sm:table-cell">
-                  <span className="block text-slate-600 dark:text-slate-300">{c.created_by}</span>
-                  <span className="block font-mono text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                    {fmtDateTime(c.created_at)}
-                  </span>
-                </td>
-                <td className="px-5 py-4 hidden lg:table-cell">
-                  <span className="block text-slate-600 dark:text-slate-300">{c.updated_by}</span>
-                  <span className="block font-mono text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                    {fmtDateTime(c.updated_at)}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <Link to={`/cases/${c.id}`}
-                        className="text-slate-300 hover:text-slate-600 transition-colors">
-                    <ArrowRight size={16} />
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {cases !== null && filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-12 text-center text-slate-400">
-                No cases {query ? "match your search" : "yet — create your first one"}.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="animate-fade-up" style={{ animationDelay: "120ms" }}>
+        <DataTable<CaseSummary>
+          columns={COLUMNS}
+          fetcher={listCases}
+          rowKey={(c) => c.id}
+          defaultSort="created_at"
+          onStats={setStats}
+          emptyText="No cases yet — create your first one."
+        />
       </div>
     </div>
   );

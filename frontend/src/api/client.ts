@@ -45,8 +45,62 @@ export interface AgentEvent {
   id: number; agent: string; type: string; payload: Record<string, unknown>; at: string;
 }
 
-export const listCases = (status?: string) =>
-  api.get<CaseSummary[]>("/cases", { params: { status } }).then((r) => r.data);
+export interface TableQuery {
+  page: number; page_size: number; sort: string; order: "asc" | "desc";
+  filters: Record<string, string>;
+}
+export interface Paged<T> { items: T[]; total: number; stats?: Record<string, number> }
+
+export interface ActivityItem {
+  id: number; when: string; category: string; action: string;
+  details: string; user: string; case: string | null; case_id: string | null;
+}
+
+export const listCases = (q: Partial<TableQuery> & { status?: string } = {}) =>
+  api.get<Paged<CaseSummary>>("/cases", {
+    params: { page: q.page ?? 1, page_size: q.page_size ?? 10,
+              sort: q.sort ?? "created_at", order: q.order ?? "desc",
+              status: q.filters?.status ?? q.status,
+              q: q.filters?.name, created_by: q.filters?.created_by,
+              updated_by: q.filters?.updated_by },
+  }).then((r) => r.data);
+
+export const getMyActivity = (q: TableQuery) =>
+  api.get<Paged<ActivityItem>>("/activity/me", {
+    params: { page: q.page, page_size: q.page_size, sort: q.sort, order: q.order,
+              category: q.filters.category, action: q.filters.action,
+              q: q.filters.details },
+  }).then((r) => r.data);
+
+export const getCaseActivity = (caseId: string, q: TableQuery) =>
+  api.get<Paged<ActivityItem>>(`/activity/cases/${caseId}`, {
+    params: { page: q.page, page_size: q.page_size, sort: q.sort, order: q.order,
+              category: q.filters.category, action: q.filters.action,
+              q: q.filters.details },
+  }).then((r) => r.data);
+
+const downloadBlobResponse = (r: { data: Blob; headers: Record<string, string> },
+                              fallback: string) => {
+  const cd: string = r.headers["content-disposition"] ?? "";
+  const name = cd.match(/filename="(.+?)"/)?.[1] ?? fallback;
+  const url = URL.createObjectURL(r.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+export const exportMyActivity = async (format: "xlsx" | "pdf") => {
+  const r = await api.get("/activity/me/export", { params: { format }, responseType: "blob" });
+  downloadBlobResponse(r, `activity_log.${format}`);
+};
+
+export const exportCaseActivity = async (caseId: string, format: "xlsx" | "pdf") => {
+  const r = await api.get(`/activity/cases/${caseId}/export`,
+    { params: { format }, responseType: "blob" });
+  downloadBlobResponse(r, `activity_log.${format}`);
+};
 export const createCase = () => api.post<{ id: string }>("/cases").then((r) => r.data);
 export const uploadFiles = (caseId: string, files: File[]) => {
   const form = new FormData();

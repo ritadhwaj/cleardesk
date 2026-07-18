@@ -68,4 +68,10 @@ def review_action(case_id: uuid.UUID, body: ReviewActionIn,
         recompute_scorecard(db, case_id)
         db.commit()
 
+    from app.services.activity import log_activity
+    log_activity(user, body.action, "REVIEW",
+                 f"Review action {body.action}"
+                 + (f" — corrected to '{body.corrected_value}'" if body.corrected_value else "")
+                 + (f" ({body.note})" if body.note else ""), case)
+
     return {"ok": True, "case_status": case.status}

@@ -40,6 +40,8 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
         settings.jwt_secret,
         algorithm=settings.jwt_algorithm,
     )
+    from app.services.activity import log_activity
+    log_activity(user, "LOGIN", "AUTH", f"Signed in as {user.role}")
     return TokenOut(access_token=token, role=user.role, full_name=user.full_name or "")
 
 
