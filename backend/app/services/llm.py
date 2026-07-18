@@ -69,7 +69,26 @@ def _anthropic(agent_name: str, content: list, max_tokens: int) -> str:
     return resp.content[0].text
 
 
+_throttle_lock = None
+_last_call_ts = 0.0
+
+
+def _throttle() -> None:
+    """Space out calls to respect Gemini free-tier rate limits (~15 RPM)."""
+    global _throttle_lock, _last_call_ts
+    import threading
+    import time
+    if _throttle_lock is None:
+        _throttle_lock = threading.Lock()
+    with _throttle_lock:
+        wait = settings.llm_min_interval_s - (time.time() - _last_call_ts)
+        if wait > 0:
+            time.sleep(wait)
+        _last_call_ts = time.time()
+
+
 def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
+    import time
     import requests
     parts = [
         {"inline_data": {"mime_type": c["media_type"], "data": c["data"]}}
@@ -78,13 +97,20 @@ def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
     ]
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{settings.gemini_model}:generateContent?key={settings.gemini_api_key}")
-    resp = requests.post(url, json={
+    body = {
         "system_instruction": {"parts": [{"text": load_prompt(agent_name)}]},
         "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"maxOutputTokens": max_tokens, "responseMimeType": "application/json"},
-    }, timeout=120)
-    resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    }
+    for attempt in range(4):
+        _throttle()
+        resp = requests.post(url, json=body, timeout=120)
+        if resp.status_code in (429, 503) and attempt < 3:
+            time.sleep(20)  # free-tier rate limit — back off and retry
+            continue
+        resp.raise_for_status()
+        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    raise RuntimeError("Gemini: retries exhausted")
 
 
 def _ollama(agent_name: str, content: list, max_tokens: int) -> str:
@@ -126,7 +152,11 @@ _MOCK_RESPONSES: dict[str, dict] = {
         "reasoning": "(mock) On re-read, final digits are '21', not '12' — challenger was right",
     },
     "audit_agent_blind_read": {
-        "value": "1999-04-21", "confidence": 85.0, "suspicion": None,
+        "fields": [
+            {"name": "pan_number", "value": "ABCDE1234F", "confidence": 95.0, "suspicion": None},
+            {"name": "name", "value": "RITADHWAJ RAY", "confidence": 90.0, "suspicion": None},
+            {"name": "dob", "value": "1999-04-21", "confidence": 58.0, "suspicion": "digits blurred"},
+        ],
     },
     "audit_agent_cross_check": {
         "issues": [

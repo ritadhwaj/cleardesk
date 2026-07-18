@@ -12,6 +12,7 @@ requests==2.32.*
 # Only needed if LLM_PROVIDER=anthropic:
 anthropic==0.34.*
 pypdf==4.*
+pymupdf==1.24.*
 Pillow==10.*
 pytesseract==0.3.*
 websockets==12.*

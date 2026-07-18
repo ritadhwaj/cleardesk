@@ -37,8 +37,7 @@ async def run_pipeline(case_id: str) -> None:
     db = SessionLocal()
     try:
         sc = recompute_scorecard(db, case_id)
-        # TODO: sc.summary = call_agent("scorecard", json of fields+discrepancies)["summary"]
-        sc.summary = "(summary generation pending)"
+        sc.summary = await _write_summary(case_id, db)
         db.commit()
         emit(case_id, "scorecard", "completed",
              {"message": f"Scorecard ready: {float(sc.overall_score)}% — awaiting human review",
@@ -49,6 +48,27 @@ async def run_pipeline(case_id: str) -> None:
     _set_status(case_id, "IN_REVIEW")
     emit(case_id, "pipeline", "completed",
          {"message": "Case queued for human review"})
+
+
+async def _write_summary(case_id: str, db) -> str:
+    """LLM writes the human-readable summary; never the number."""
+    import json
+    from app.services.llm import call_agent
+    try:
+        discrepancies = db.query(models.Discrepancy).filter(
+            models.Discrepancy.case_id == case_id).all()
+        docs = db.query(models.Document).filter(models.Document.case_id == case_id).all()
+        payload = {
+            "documents": len(docs),
+            "discrepancies": [
+                {"severity": d.severity, "title": d.title, "resolution": d.resolution}
+                for d in discrepancies
+            ],
+        }
+        result = await asyncio.to_thread(call_agent, "scorecard", json.dumps(payload))
+        return result.get("summary", "")
+    except Exception:  # noqa: BLE001 — summary is nice-to-have, never fatal
+        return "Summary unavailable — see discrepancy list below."
 
 
 def _set_status(case_id: str, status: str) -> None:

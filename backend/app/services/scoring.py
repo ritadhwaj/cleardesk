@@ -27,7 +27,13 @@ def recompute_scorecard(db: Session, case_id: uuid.UUID) -> models.Scorecard:
     auto_verified = review_needed = 0
 
     for doc in docs:
-        fields = doc.fields
+        # latest extraction round wins per field (re-reads supersede originals)
+        latest: dict[str, object] = {}
+        for f in doc.fields:
+            cur = latest.get(f.field_name)
+            if cur is None or (f.extraction_round or 1) > (cur.extraction_round or 1):
+                latest[f.field_name] = f
+        fields = list(latest.values())
         if not fields:
             doc_scores[str(doc.id)] = 0.0
             continue

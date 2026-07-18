@@ -85,20 +85,34 @@ def case_detail(case_id: uuid.UUID, db: Session = Depends(get_db),
         raise HTTPException(404, "Case not found")
     docs = db.query(models.Document).filter(models.Document.case_id == case_id).all()
     discrepancies = db.query(models.Discrepancy).filter(models.Discrepancy.case_id == case_id).all()
+    type_codes = {t.id: t.code for t in db.query(models.DocTypeTemplate).all()}
+    process = db.query(models.ProcessTemplate).get(case.inferred_process_id) \
+        if case.inferred_process_id else None
+
+    def latest_fields(d):
+        latest = {}
+        for f in d.fields:
+            cur = latest.get(f.field_name)
+            if cur is None or (f.extraction_round or 1) > (cur.extraction_round or 1):
+                latest[f.field_name] = f
+        return latest.values()
+
     return {
         "id": str(case.id),
         "status": case.status,
+        "inferred_process": process.code if process else None,
         "inference_confidence": float(case.inference_confidence or 0),
         "documents": [
             {
                 "id": str(d.id), "status": d.status,
+                "doc_type": type_codes.get(d.doc_type_id, "UNKNOWN"),
                 "confidence": float(d.classify_confidence or 0),
                 "fields": [
                     {
-                        "name": f.field_name, "value": f.value_normalized,
+                        "id": str(f.id), "name": f.field_name, "value": f.value_normalized,
                         "confidence": float(f.confidence or 0),
                         "round": f.extraction_round,
-                    } for f in d.fields
+                    } for f in latest_fields(d)
                 ],
             } for d in docs
         ],

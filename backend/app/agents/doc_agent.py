@@ -1,18 +1,23 @@
-"""DOC AGENT — the documenter.
+"""DOC AGENT — the documenter. Full implementation.
 
-Runs in parallel with the Audit Agent. Its job:
-  1. Intake raw uploads, classify each document, infer the business process.
-  2. Extract every template field WITH evidence, and immediately publish each
-     one as a DOC_CLAIM on the bus — it does not wait to finish everything.
-  3. Keep listening for CHALLENGEs while still working: when challenged it
-     re-reads the exact field character by character and DEFENDs or CONCEDEs.
-  4. Exit when the Audit Agent sends AUDIT_COMPLETE.
+Runs in parallel with the Audit Agent:
+  1. Intakes each upload, classifies it, extracts template fields with evidence.
+  2. Publishes one DOC_CLAIM per document (all fields) the moment it's read —
+     the Audit Agent starts verifying while this agent moves to the next file.
+  3. Answers CHALLENGEs between documents and after finishing: re-reads the
+     disputed field and DEFENDs or CONCEDEs.
+  4. Infers the best-fit business process from the full bundle.
 """
 import asyncio
+import json
+from pathlib import Path
 
 from app.agents.bus import AgentBus, Message
+from app.config import settings
 from app.db.session import SessionLocal
 from app.db import models
+from app.services.events import emit
+from app.services.files import prepare_pages, crop_evidence
 from app.services.llm import call_agent, image_block
 
 ME, PEER = "doc_agent", "audit_agent"
@@ -20,43 +25,33 @@ ME, PEER = "doc_agent", "audit_agent"
 
 async def run(bus: AgentBus) -> None:
     case_id = bus.case_id
+    seen_doc_types: list[str] = []
 
-    # ---- Phase 1: intake + classify + publish claims (peer audits in parallel) ----
     db = SessionLocal()
     try:
         uploads = db.query(models.Upload).filter(models.Upload.case_id == case_id).all()
-        for up in uploads:
-            doc = models.Document(case_id=case_id, upload_id=up.id, status="UNIDENTIFIED")
-            db.add(doc)
-            db.flush()
-            db.commit()
-
-            # TODO: pages = render_pages_to_images(up.file_path)
-            # TODO: cls = call_agent("doc_agent_classify", [image_block(p) for p in pages])
-            #       doc.doc_type, doc.classify_confidence = ...
-            # TODO: fields = call_agent("doc_agent_extract", pages + template + few_shots)
-            #       persist ExtractedField rows, then per field:
-            #
-            # await bus.send(ME, PEER, "DOC_CLAIM", {
-            #     "message": f"Read {field.name} = '{field.value}' ({field.confidence}%) from {doc_type}",
-            #     "claim_id": str(field.id), "document_id": str(doc.id),
-            #     "field": field.name, "value": field.value,
-            #     "confidence": field.confidence, "evidence": field.evidence_crop_path,
-            # })
-            await bus.send(ME, PEER, "DOC_CLAIM", {
-                "message": f"Documented upload '{up.file_path.split('/')[-1]}' (extraction TODO)",
-                "document_id": str(doc.id),
-            })
-            # Drain any challenges that arrived while we were extracting.
-            while (msg := bus.try_receive(ME)) is not None:
-                await _handle(bus, msg)
+        templates = {t.code: t for t in db.query(models.DocTypeTemplate).all()}
     finally:
         db.close()
+
+    for up in uploads:
+        fname = Path(up.file_path).name
+        try:
+            doc_type = await _process_upload(bus, up, fname, templates)
+            if doc_type:
+                seen_doc_types.append(doc_type)
+        except Exception as exc:  # noqa: BLE001 — one bad file must not kill the case
+            emit(case_id, ME, "error", {"message": f"Failed on '{fname}': {exc}"})
+        # Answer any challenges that arrived while we were busy extracting.
+        while (msg := bus.try_receive(ME)) is not None:
+            await _handle(bus, msg)
+
+    _infer_process(case_id, seen_doc_types)
 
     await bus.send(ME, PEER, "DOCS_COMPLETE",
                    {"message": "All documents classified and extracted — over to you"})
 
-    # ---- Phase 2: stay alive answering challenges until the audit is done ----
+    # Stay alive answering challenges until the audit is finished.
     while True:
         msg = await bus.receive(ME)
         if msg.type == "AUDIT_COMPLETE":
@@ -64,18 +59,168 @@ async def run(bus: AgentBus) -> None:
         await _handle(bus, msg)
 
 
-async def _handle(bus: AgentBus, msg: Message) -> None:
-    """Respond to a single message from the Audit Agent."""
-    if msg.type == "CHALLENGE":
-        claim_id = msg.payload.get("claim_id")
-        # TODO: re-read the disputed field with the challenge as context:
-        #   result = call_agent("doc_agent_reread", [evidence image + challenge reason])
-        #   if result confirms original -> DEFEND with reasoning
-        #   if result revises          -> CONCEDE with new value, bump extraction_round
-        await bus.send(ME, PEER, "DEFEND", {
-            "message": f"Re-read claim {claim_id}: (re-extraction TODO — confirming original)",
-            "claim_id": claim_id,
-            "confirmed": True,
+async def _process_upload(bus: AgentBus, up: models.Upload, fname: str,
+                          templates: dict) -> str | None:
+    """Classify + extract one upload, persist results, publish the claim."""
+    case_id = bus.case_id
+    pages_dir = str(Path(settings.upload_dir) / case_id / "pages")
+    pages = prepare_pages(up.file_path, pages_dir)
+
+    db = SessionLocal()
+    try:
+        doc = models.Document(case_id=case_id, upload_id=up.id, status="UNIDENTIFIED")
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+        doc_id = str(doc.id)
+
+        if not pages:
+            doc.status = "ILLEGIBLE"
+            db.commit()
+            emit(case_id, ME, "finding",
+                 {"message": f"'{fname}': unsupported or unreadable file — marked illegible"})
+            return None
+
+        # ---- classify ----
+        emit(case_id, ME, "finding", {"message": f"Reading '{fname}'…"})
+        cls = await asyncio.to_thread(
+            call_agent, "doc_agent_classify",
+            [image_block(p) for p in pages[:3]] +
+            [{"type": "text", "text": f"File name: {fname}"}],
+        )
+        doc_type = str(cls.get("doc_type", "OTHER")).upper()
+        cls_conf = float(cls.get("confidence", 0))
+        template = templates.get(doc_type)
+        doc.doc_type_id = template.id if template else None
+        doc.classify_confidence = cls_conf
+        doc.status = "IDENTIFIED" if template else "UNIDENTIFIED"
+        db.commit()
+        emit(case_id, ME, "finding",
+             {"message": f"'{fname}' is a {doc_type} ({cls_conf:.0f}%) — {cls.get('reason', '')}"})
+
+        if not template:
+            return doc_type
+
+        # ---- extract ----
+        few_shots = db.query(models.FeedbackExample).filter_by(doc_type=doc_type).limit(5).all()
+        shots_txt = "\n".join(
+            f"- Past human correction on {s.field_name}: '{s.wrong_value}' was wrong, "
+            f"correct was '{s.correct_value}'. {s.context_note}" for s in few_shots
+        )
+        extraction = await asyncio.to_thread(
+            call_agent, "doc_agent_extract",
+            [image_block(p) for p in pages[:3]] + [{
+                "type": "text",
+                "text": "Field template:\n" + json.dumps(template.expected_fields)
+                        + (f"\n\nLearn from these past corrections:\n{shots_txt}" if shots_txt else ""),
+            }],
+        )
+
+        claim_fields = []
+        crops_dir = Path(settings.upload_dir) / case_id / "crops"
+        for f in extraction.get("fields", []):
+            row = models.ExtractedField(
+                document_id=doc.id,
+                field_name=f.get("name", "?"),
+                value_raw=f.get("value_raw"),
+                value_normalized=f.get("value_normalized"),
+                confidence=float(f.get("confidence", 0)),
+                extraction_round=1,
+            )
+            db.add(row)
+            db.flush()
+            crop = crop_evidence(pages[0], f.get("bbox"), str(crops_dir / f"{row.id}.png"))
+            row.evidence_crop_path = crop
+            claim_fields.append({
+                "field_id": str(row.id), "name": row.field_name,
+                "value": row.value_normalized, "value_raw": row.value_raw,
+                "confidence": float(row.confidence),
+            })
+        db.commit()
+
+        readable = ", ".join(f"{c['name']}='{c['value']}' ({c['confidence']:.0f}%)"
+                             for c in claim_fields)
+        await bus.send(ME, PEER, "DOC_CLAIM", {
+            "message": f"CLAIM [{doc_type}] {readable}",
+            "document_id": doc_id, "doc_type": doc_type,
+            "page_image": pages[0], "fields": claim_fields,
         })
-    elif msg.type == "VERDICT":
-        pass  # informational; audit agent already persisted the outcome
+        return doc_type
+    finally:
+        db.close()
+
+
+def _infer_process(case_id: str, doc_types: list[str]) -> None:
+    """Best-fit business process from what was uploaded — the user never told us."""
+    types = set(doc_types)
+    if types & {"PAYSLIP", "BANK_STMT", "ITR"}:
+        code, conf = "LOAN", 85.0 + 5.0 * len(types & {"PAYSLIP", "BANK_STMT", "ITR"})
+    elif types & {"PAN", "AADHAAR"}:
+        code, conf = "KYC", 90.0
+    else:
+        code, conf = "KYC", 40.0
+    db = SessionLocal()
+    try:
+        case = db.query(models.Case).get(case_id)
+        template = db.query(models.ProcessTemplate).filter_by(code=code).first()
+        if case and template:
+            case.inferred_process_id = template.id
+            case.inference_confidence = min(conf, 99.0)
+            db.commit()
+    finally:
+        db.close()
+    emit(case_id, ME, "finding",
+         {"message": f"This bundle best fits: {code} ({min(conf, 99.0):.0f}% confidence)"})
+
+
+async def _handle(bus: AgentBus, msg: Message) -> None:
+    """Answer one CHALLENGE from the Audit Agent: re-read, then defend or concede."""
+    if msg.type != "CHALLENGE":
+        return
+    case_id = bus.case_id
+    p = msg.payload
+    field_id, field_name = p.get("field_id"), p.get("field")
+
+    db = SessionLocal()
+    try:
+        orig = db.query(models.ExtractedField).get(field_id)
+        if not orig:
+            return
+        evidence = orig.evidence_crop_path or p.get("page_image")
+        content = [{
+            "type": "text",
+            "text": f"Field: {field_name}\nYour original reading: '{orig.value_normalized}' "
+                    f"({float(orig.confidence):.0f}%)\nChallenge: {p.get('reason', '')}",
+        }]
+        if evidence:
+            content.insert(0, image_block(evidence))
+        result = await asyncio.to_thread(call_agent, "doc_agent_reread", content)
+
+        decision = str(result.get("decision", "DEFEND")).upper()
+        new_value = result.get("value", orig.value_normalized)
+        new_conf = float(result.get("confidence", orig.confidence or 0))
+
+        if decision == "CONCEDE":
+            revised = models.ExtractedField(
+                document_id=orig.document_id, field_name=orig.field_name,
+                value_raw=new_value, value_normalized=new_value,
+                confidence=new_conf, evidence_crop_path=orig.evidence_crop_path,
+                extraction_round=(orig.extraction_round or 1) + 1,
+            )
+            db.add(revised)
+            db.commit()
+            await bus.send(ME, PEER, "CONCEDE", {
+                "message": f"You're right on {field_name}: revising to '{new_value}' — "
+                           f"{result.get('reasoning', '')}",
+                "field_id": field_id, "field": field_name,
+                "value": new_value, "confidence": new_conf,
+            })
+        else:
+            await bus.send(ME, PEER, "DEFEND", {
+                "message": f"Standing by {field_name}='{orig.value_normalized}': "
+                           f"{result.get('reasoning', '')}",
+                "field_id": field_id, "field": field_name,
+                "value": orig.value_normalized, "confidence": new_conf,
+            })
+    finally:
+        db.close()
