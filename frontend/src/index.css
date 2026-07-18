@@ -66,16 +66,26 @@ code, pre, .font-mono {
   background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
 }
 
-/* interactive card */
+/* interactive card — in dark mode surfaces sit clearly ABOVE the page:
+   lighter panel, stronger border, faint top highlight for separation */
 .card {
-  @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-sm;
+  @apply bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200/70
+         dark:border-slate-600/50 shadow-sm;
   transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease,
               background-color 0.5s ease;
 }
+.dark .card {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
 .card-hover:hover {
-  @apply shadow-md border-slate-300/80 dark:border-slate-700;
+  @apply shadow-md border-slate-300/80 dark:border-slate-400/60;
   transform: translateY(-1px);
 }
+
+/* readability: lift low-contrast grays one step in dark mode */
+.dark .text-slate-500 { color: #94a3b8; }   /* slate-400 */
+.dark .text-slate-600 { color: #cbd5e1; }   /* slate-300 */
+.dark tr[class*="border-"] { border-color: rgba(71, 85, 105, 0.55); }
 
 /* buttons */
 .btn {
@@ -88,21 +98,22 @@ code, pre, .font-mono {
 .btn-success { @apply bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm; }
 .btn-danger  { @apply bg-red-600 text-white hover:bg-red-500 shadow-sm; }
 .btn-ghost   { @apply bg-white text-slate-600 border border-slate-200 hover:bg-slate-50
-                      dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800; }
+                      dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700; }
 
 /* soft-tinted chips that read well in both themes */
-.chip-slate   { @apply bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300; }
-.chip-blue    { @apply bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300; }
-.chip-purple  { @apply bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300; }
-.chip-amber   { @apply bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300; }
-.chip-emerald { @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300; }
-.chip-red     { @apply bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300; }
-.chip-indigo  { @apply bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300; }
+.chip-slate   { @apply bg-slate-100 text-slate-600 dark:bg-slate-700/70 dark:text-slate-200; }
+.chip-blue    { @apply bg-blue-50 text-blue-700 dark:bg-blue-500/25 dark:text-blue-200; }
+.chip-purple  { @apply bg-purple-50 text-purple-700 dark:bg-purple-500/25 dark:text-purple-200; }
+.chip-amber   { @apply bg-amber-50 text-amber-700 dark:bg-amber-500/25 dark:text-amber-200; }
+.chip-emerald { @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-500/25 dark:text-emerald-200; }
+.chip-red     { @apply bg-red-50 text-red-700 dark:bg-red-500/25 dark:text-red-200; }
+.chip-indigo  { @apply bg-indigo-50 text-indigo-700 dark:bg-indigo-500/25 dark:text-indigo-200; }
 
 /* headings + inputs */
 .h-page  { @apply text-slate-900 dark:text-white; }
 .input   { @apply rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm
                   focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
                   transition-shadow
-                  dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200
-                  dark:focus:ring-white/10 dark:focus:border-slate-500; }
+                  dark:bg-slate-900/80 dark:border-slate-600 dark:text-slate-100
+                  dark:placeholder:text-slate-500
+                  dark:focus:ring-white/10 dark:focus:border-slate-400; }

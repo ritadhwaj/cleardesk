@@ -96,6 +96,15 @@ export const exportMyActivity = async (format: "xlsx" | "pdf") => {
   downloadBlobResponse(r, `activity_log.${format}`);
 };
 
+export interface Insights {
+  status: string; sla_hours: number; total: number; on_time: number; overdue: number;
+  pivot: { process: string; on_time: number; overdue: number }[];
+  cases: { id: string; ref_no: string; name: string; process: string;
+           created_at: string; actioned_at: string | null; overdue: boolean }[];
+}
+export const getInsights = (status: string) =>
+  api.get<Insights>("/cases/insights", { params: { status } }).then((r) => r.data);
+
 export const exportCaseActivity = async (caseId: string, format: "xlsx" | "pdf") => {
   const r = await api.get(`/activity/cases/${caseId}/export`,
     { params: { format }, responseType: "blob" });

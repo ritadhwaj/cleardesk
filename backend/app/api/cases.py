@@ -201,7 +201,8 @@ def list_cases(status: str | None = None, q: str | None = None,
     all_cases = db.query(models.Case.status).all()
     stats = {"total": len(all_cases),
              "in_review": sum(1 for (s,) in all_cases if s == "IN_REVIEW"),
-             "approved": sum(1 for (s,) in all_cases if s == "APPROVED")}
+             "approved": sum(1 for (s,) in all_cases if s == "APPROVED"),
+             "rejected": sum(1 for (s,) in all_cases if s == "REJECTED")}
 
     return {
         "items": [
@@ -215,6 +216,52 @@ def list_cases(status: str | None = None, q: str | None = None,
         ],
         "total": total,
         "stats": stats,
+    }
+
+
+SLA_HOURS = 24  # a case should be decided within this window
+
+
+@router.get("/insights")
+def case_insights(status: str, db: Session = Depends(get_db),
+                  user: models.User = Depends(current_user)):
+    """On-time vs overdue analytics for one status bucket.
+    Decided cases (APPROVED/REJECTED): on time if decided within SLA of creation.
+    Awaiting cases (IN_REVIEW): overdue once they've waited longer than SLA."""
+    from datetime import datetime, timedelta
+    if status not in ("IN_REVIEW", "APPROVED", "REJECTED"):
+        raise HTTPException(400, "status must be IN_REVIEW, APPROVED or REJECTED")
+
+    sla = timedelta(hours=SLA_HOURS)
+    now = datetime.utcnow()
+    processes = {p.id: p.code for p in db.query(models.ProcessTemplate).all()}
+    cases = db.query(models.Case).filter(models.Case.status == status).all()
+
+    items, pivot = [], {}
+    for c in cases:
+        if status == "IN_REVIEW":
+            overdue = (now - c.created_at) > sla
+            actioned_at = None
+        else:
+            decided = c.updated_at or c.created_at
+            overdue = (decided - c.created_at) > sla
+            actioned_at = decided.isoformat()
+        proc = processes.get(c.inferred_process_id, "UNCLASSIFIED")
+        row = pivot.setdefault(proc, {"process": proc, "on_time": 0, "overdue": 0})
+        row["overdue" if overdue else "on_time"] += 1
+        items.append({
+            "id": str(c.id), "ref_no": c.ref_no, "name": c.name, "process": proc,
+            "created_at": c.created_at.isoformat(), "actioned_at": actioned_at,
+            "overdue": overdue,
+        })
+
+    on_time = sum(r["on_time"] for r in pivot.values())
+    overdue_n = sum(r["overdue"] for r in pivot.values())
+    return {
+        "status": status, "sla_hours": SLA_HOURS,
+        "total": len(items), "on_time": on_time, "overdue": overdue_n,
+        "pivot": sorted(pivot.values(), key=lambda r: -(r["on_time"] + r["overdue"])),
+        "cases": sorted(items, key=lambda x: x["created_at"], reverse=True),
     }
 
 

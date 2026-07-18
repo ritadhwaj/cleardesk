@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { FolderOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
+import { FolderOpen, Clock, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import { listCases, fmtDateTime, type CaseSummary } from "../api/client";
 import DataTable, { type Column } from "../components/DataTable";
 
@@ -95,24 +95,37 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total cases", value: stats.total, icon: FolderOpen, tint: "chip-slate" },
-          { label: "Awaiting review", value: stats.in_review, icon: Clock, tint: "chip-amber" },
-          { label: "Approved", value: stats.approved, icon: CheckCircle2, tint: "chip-emerald" },
-        ].map(({ label, value, icon: Icon, tint }, i) => (
-          <div key={label} className="card p-5 animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+          { label: "Total cases", value: stats.total, icon: FolderOpen, tint: "chip-slate", to: null },
+          { label: "Awaiting review", value: stats.in_review, icon: Clock, tint: "chip-amber", to: "/insights/IN_REVIEW" },
+          { label: "Approved", value: stats.approved, icon: CheckCircle2, tint: "chip-emerald", to: "/insights/APPROVED" },
+          { label: "Rejected", value: stats.rejected, icon: XCircle, tint: "chip-red", to: "/insights/REJECTED" },
+        ].map(({ label, value, icon: Icon, tint, to }, i) => {
+          const body = (
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
                 <p className="text-3xl font-bold h-page mt-1">{value ?? "–"}</p>
+                {to && <p className="text-[11px] text-indigo-500 dark:text-indigo-300 mt-0.5">
+                  view insights →</p>}
               </div>
               <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}>
                 <Icon size={20} />
               </span>
             </div>
-          </div>
-        ))}
+          );
+          return to ? (
+            <Link key={label} to={to} className="card card-hover p-5 animate-fade-up cursor-pointer"
+                  style={{ animationDelay: `${i * 60}ms` }}>
+              {body}
+            </Link>
+          ) : (
+            <div key={label} className="card p-5 animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+              {body}
+            </div>
+          );
+        })}
       </div>
 
       <div className="animate-fade-up" style={{ animationDelay: "120ms" }}>

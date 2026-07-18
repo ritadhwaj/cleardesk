@@ -11,6 +11,7 @@ const NewCase = lazy(() => import("./pages/NewCase"));
 const CaseDetail = lazy(() => import("./pages/CaseDetail"));
 const ReviewQueue = lazy(() => import("./pages/ReviewQueue"));
 const ActivityLog = lazy(() => import("./pages/ActivityLog"));
+const InsightsPage = lazy(() => import("./pages/Insights"));
 
 function PageLoader() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/cases/:caseId" element={<CaseDetail />} />
             <Route path="/review" element={<ReviewQueue />} />
             <Route path="/activity" element={<ActivityLog />} />
+            <Route path="/insights/:status" element={<InsightsPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Route>
         </Routes>
