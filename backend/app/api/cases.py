@@ -9,7 +9,7 @@ from app.api.auth import current_user
 from app.config import settings
 from app.db.session import get_db, SessionLocal
 from app.db import models
-from app.agents.graph import run_pipeline
+from app.agents.orchestrator import run_pipeline
 
 router = APIRouter()
 
