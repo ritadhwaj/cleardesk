@@ -97,8 +97,7 @@ export default function Dashboard() {
             <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
               <th className="px-5 py-3.5">Case</th>
               <th className="px-5 py-3.5">Status</th>
-              <th className="px-5 py-3.5 hidden md:table-cell">Created by</th>
-              <th className="px-5 py-3.5 hidden sm:table-cell">Created at</th>
+              <th className="px-5 py-3.5 hidden sm:table-cell">Created by</th>
               <th className="px-5 py-3.5 hidden lg:table-cell">Last updated by</th>
               <th className="px-5 py-3.5 w-10" />
             </tr>
@@ -107,7 +106,7 @@ export default function Dashboard() {
             {cases === null &&
               [...Array(3)].map((_, i) => (
                 <tr key={i} className="border-b border-slate-50 dark:border-slate-800/60">
-                  <td className="px-5 py-4" colSpan={6}><div className="skeleton h-5 w-full" /></td>
+                  <td className="px-5 py-4" colSpan={5}><div className="skeleton h-5 w-full" /></td>
                 </tr>
               ))}
             {filtered.map((c, i) => (
@@ -127,12 +126,11 @@ export default function Dashboard() {
                   </Link>
                 </td>
                 <td className="px-5 py-4"><StatusBadge status={c.status} /></td>
-                <td className="px-5 py-4 hidden md:table-cell text-slate-600 dark:text-slate-300">
-                  {c.created_by}
-                </td>
-                <td className="px-5 py-4 hidden sm:table-cell text-slate-500 dark:text-slate-400
-                               font-mono text-xs whitespace-nowrap">
-                  {fmtDateTime(c.created_at)}
+                <td className="px-5 py-4 hidden sm:table-cell">
+                  <span className="block text-slate-600 dark:text-slate-300">{c.created_by}</span>
+                  <span className="block font-mono text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    {fmtDateTime(c.created_at)}
+                  </span>
                 </td>
                 <td className="px-5 py-4 hidden lg:table-cell">
                   <span className="block text-slate-600 dark:text-slate-300">{c.updated_by}</span>
@@ -149,7 +147,7 @@ export default function Dashboard() {
               </tr>
             ))}
             {cases !== null && filtered.length === 0 && (
-              <tr><td colSpan={6} className="px-5 py-12 text-center text-slate-400">
+              <tr><td colSpan={5} className="px-5 py-12 text-center text-slate-400">
                 No cases {query ? "match your search" : "yet — create your first one"}.
               </td></tr>
             )}
