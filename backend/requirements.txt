@@ -5,7 +5,8 @@ psycopg2-binary==2.9.*
 alembic==1.13.*
 pydantic-settings==2.*
 python-jose[cryptography]==3.3.*
-passlib[bcrypt]==1.7.*
+passlib==1.7.*
+bcrypt==4.0.1
 python-multipart==0.0.*
 requests==2.32.*
 # Only needed if LLM_PROVIDER=anthropic:
