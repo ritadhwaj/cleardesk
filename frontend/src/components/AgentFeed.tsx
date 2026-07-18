@@ -1,54 +1,97 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { AgentEvent } from "../api/client";
 
-const AGENT_STYLE: Record<string, { chip: string; align: string }> = {
-  doc_agent: { chip: "bg-blue-100 text-blue-700", align: "justify-start" },
-  audit_agent: { chip: "bg-purple-100 text-purple-700", align: "justify-end" },
-  scorecard: { chip: "bg-green-100 text-green-700", align: "justify-center" },
-  pipeline: { chip: "bg-slate-100 text-slate-500", align: "justify-center" },
+const AGENT_STYLE: Record<string, { chip: string; align: string; avatar: string }> = {
+  doc_agent:   { chip: "bg-blue-50 text-blue-700",     align: "justify-start", avatar: "bg-blue-600" },
+  audit_agent: { chip: "bg-purple-50 text-purple-700", align: "justify-end",   avatar: "bg-purple-600" },
+  scorecard:   { chip: "bg-emerald-50 text-emerald-700", align: "justify-center", avatar: "bg-emerald-600" },
+  pipeline:    { chip: "bg-slate-100 text-slate-500",  align: "justify-center", avatar: "bg-slate-400" },
 };
 
 const TYPE_ICON: Record<string, string> = {
-  doc_claim: "📄",
-  challenge: "⚔️",
-  defend: "🛡️",
-  concede: "🤝",
-  verdict: "✅",
-  docs_complete: "🏁",
-  audit_complete: "🏁",
-  error: "❌",
+  doc_claim: "📄", challenge: "⚔️", defend: "🛡️", concede: "🤝",
+  verdict: "✅", docs_complete: "🏁", audit_complete: "🏁", error: "❌",
 };
 
-/** The two agents' live conversation, rendered like a chat:
- *  Doc Agent on the left, Audit Agent on the right. The demo star. */
+const RENDER_WINDOW = 150; // lazy log rendering: only the latest N messages hit the DOM
+
+/** The two agents' live conversation — Doc Agent left, Audit Agent right.
+ *  Smart-scrolls: follows the log only while you're at the bottom. */
 export default function AgentFeed({ events }: { events: AgentEvent[] }) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(true);   // are we following the tail?
+  const visible = events.slice(-RENDER_WINDOW);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [events]);
+    if (pinned && boxRef.current) {
+      boxRef.current.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [events.length, pinned]);
+
+  const onScroll = () => {
+    const el = boxRef.current;
+    if (!el) return;
+    setPinned(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 h-96 overflow-y-auto space-y-2">
-      {events.map((e) => {
-        const style = AGENT_STYLE[e.agent] ?? AGENT_STYLE.pipeline;
-        return (
-          <div key={e.id} className={`flex ${style.align}`}>
-            <div className="max-w-[80%] flex gap-2 items-start text-sm bg-slate-50 rounded-lg p-2">
-              <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${style.chip}`}>
-                {e.agent.replace("_", " ")}
-              </span>
-              <span>{TYPE_ICON[e.type] ?? ""}</span>
-              <span className="text-slate-700">{String(e.payload?.message ?? "")}</span>
+    <div className="relative">
+      <div ref={boxRef} onScroll={onScroll}
+           className="card p-5 h-[480px] overflow-y-auto space-y-2.5">
+        {events.length > RENDER_WINDOW && (
+          <p className="text-center text-xs text-slate-400">
+            {events.length - RENDER_WINDOW} earlier messages hidden
+          </p>
+        )}
+        {visible.map((e) => {
+          const s = AGENT_STYLE[e.agent] ?? AGENT_STYLE.pipeline;
+          return (
+            <div key={e.id} className={`flex ${s.align} animate-fade-up`}>
+              <div className="max-w-[82%] flex gap-2.5 items-start">
+                <span className={`shrink-0 w-7 h-7 rounded-full ${s.avatar} text-white text-[10px]
+                                  font-bold flex items-center justify-center mt-0.5`}>
+                  {e.agent === "doc_agent" ? "DA" : e.agent === "audit_agent" ? "AA" : "•"}
+                </span>
+                <div className={`rounded-2xl px-3.5 py-2.5 ${
+                    e.type === "error" ? "bg-red-50 border border-red-100" : "bg-slate-50"}`}>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${s.chip}`}>
+                      {e.agent.replace("_", " ")}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(e.at).toLocaleTimeString(undefined,
+                        { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                    <span className="text-xs">{TYPE_ICON[e.type] ?? ""}</span>
+                  </div>
+                  <p className="text-sm text-slate-700 leading-relaxed break-words">
+                    {String(e.payload?.message ?? "")}
+                  </p>
+                </div>
+              </div>
             </div>
+          );
+        })}
+        {events.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+            <span className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="w-2 h-2 rounded-full bg-slate-300 animate-bounce"
+                      style={{ animationDelay: `${i * 150}ms` }} />
+              ))}
+            </span>
+            <p className="text-sm">Waiting for the agents to start talking…</p>
           </div>
-        );
-      })}
-      {events.length === 0 && (
-        <p className="text-slate-400 text-sm">
-          The Doc Agent and Audit Agent will converse here once the pipeline runs…
-        </p>
+        )}
+      </div>
+
+      {!pinned && (
+        <button onClick={() => setPinned(true)}
+                className="absolute bottom-4 right-4 btn btn-primary !rounded-full !p-2.5 shadow-lg animate-scale-in">
+          <ChevronDown size={16} />
+        </button>
       )}
-      <div ref={bottomRef} />
     </div>
   );
 }

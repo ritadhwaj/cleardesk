@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     llm_model: str = "claude-sonnet-5"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_fallback_models: str = "gemini-2.5-flash,gemini-2.0-flash,gemini-2.0-flash-lite"
+    llm_cache: bool = True  # cache LLM responses; identical re-runs cost zero quota
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2-vision"
 

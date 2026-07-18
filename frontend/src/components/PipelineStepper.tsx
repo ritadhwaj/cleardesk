@@ -1,7 +1,7 @@
+import { FileSearch, ShieldQuestion, Swords, Gauge } from "lucide-react";
 import type { AgentEvent } from "../api/client";
 
-/** Progress for the parallel two-agent run:
- *  both agent lanes shown side by side, then convergence -> scorecard. */
+/** Progress for the parallel two-agent run: agent lanes -> disputes -> scorecard. */
 export default function PipelineStepper({ events }: { events: AgentEvent[] }) {
   const started = events.some((e) => e.agent === "pipeline" && e.type === "started");
   const docsDone = events.some((e) => e.type === "docs_complete");
@@ -9,29 +9,32 @@ export default function PipelineStepper({ events }: { events: AgentEvent[] }) {
   const scored = events.some((e) => e.agent === "scorecard" && e.type === "completed");
   const disputes = events.filter((e) => e.type === "challenge").length;
 
-  const lane = (label: string, active: boolean, done: boolean, chip: string) => (
-    <span className={`text-xs px-3 py-1 rounded-full whitespace-nowrap
-      ${done ? "bg-green-100 text-green-700"
-        : active ? `${chip} animate-pulse`
+  const lane = (label: string, Icon: typeof FileSearch, active: boolean, done: boolean, activeCls: string) => (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
+                      whitespace-nowrap transition-all duration-300
+      ${done ? "bg-emerald-50 text-emerald-700"
+        : active ? `${activeCls} animate-pulse`
         : "bg-slate-100 text-slate-400"}`}>
+      <Icon size={13} />
       {label}
     </span>
   );
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto">
-      <div className="flex flex-col gap-1">
-        {lane("doc agent — documenting", started && !docsDone, docsDone, "bg-blue-100 text-blue-700")}
-        {lane("audit agent — verifying", started && !auditDone, auditDone, "bg-purple-100 text-purple-700")}
+    <div className="card px-4 py-3 flex items-center gap-3 overflow-x-auto">
+      <div className="flex flex-col gap-1.5">
+        {lane("Doc Agent — documenting", FileSearch, started && !docsDone, docsDone, "bg-blue-50 text-blue-700")}
+        {lane("Audit Agent — verifying", ShieldQuestion, started && !auditDone, auditDone, "bg-purple-50 text-purple-700")}
       </div>
-      <div className="w-6 h-px bg-slate-300" />
-      {disputes > 0 && (
-        <span className="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
-          ⚔️ {disputes} dispute{disputes > 1 ? "s" : ""}
-        </span>
-      )}
-      <div className="w-6 h-px bg-slate-300" />
-      {lane("scorecard", auditDone && !scored, scored, "bg-green-100 text-green-700")}
+      <div className="w-8 h-px bg-gradient-to-r from-slate-200 to-slate-300 shrink-0" />
+      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
+                        whitespace-nowrap transition-all
+        ${disputes ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-400"}`}>
+        <Swords size={13} />
+        {disputes ? `${disputes} dispute${disputes > 1 ? "s" : ""}` : "no disputes"}
+      </span>
+      <div className="w-8 h-px bg-gradient-to-r from-slate-200 to-slate-300 shrink-0" />
+      {lane("Scorecard", Gauge, auditDone && !scored, scored, "bg-emerald-50 text-emerald-700")}
     </div>
   );
 }

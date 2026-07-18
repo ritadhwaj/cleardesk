@@ -13,7 +13,10 @@ Set LLM_PROVIDER in .env:
   anthropic -> Claude API (paid key).
 """
 import base64
+import hashlib
+import io
 import json
+import threading
 from pathlib import Path
 
 from app.config import settings
@@ -26,10 +29,52 @@ def load_prompt(name: str) -> str:
 
 
 def image_block(image_path: str) -> dict:
-    """Provider-neutral image block; translated per provider below."""
-    data = base64.b64encode(Path(image_path).read_bytes()).decode()
-    media_type = "image/png" if image_path.endswith(".png") else "image/jpeg"
-    return {"type": "image", "media_type": media_type, "data": data}
+    """Provider-neutral image block.
+
+    QUOTA SAVER #1: images dominate token usage, so downscale to max 1024px
+    and re-encode as JPEG q80 before sending — cuts image tokens ~4-10x with
+    no practical loss for document OCR.
+    """
+    from PIL import Image
+    img = Image.open(image_path)
+    img.thumbnail((1024, 1024))
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    data = base64.b64encode(buf.getvalue()).decode()
+    return {"type": "image", "media_type": "image/jpeg", "data": data}
+
+
+# ---- QUOTA SAVER #2: persistent response cache -------------------------------
+# Same agent + same content (e.g. re-running the demo docs) costs zero quota.
+_cache_lock = threading.Lock()
+_cache: dict | None = None
+
+
+def _cache_path() -> Path:
+    return Path(settings.upload_dir) / "llm_cache.json"
+
+
+def _cache_get(key: str):
+    global _cache
+    with _cache_lock:
+        if _cache is None:
+            try:
+                _cache = json.loads(_cache_path().read_text(encoding="utf-8"))
+            except Exception:
+                _cache = {}
+        return _cache.get(key)
+
+
+def _cache_put(key: str, value: dict) -> None:
+    with _cache_lock:
+        _cache[key] = value
+        try:
+            _cache_path().parent.mkdir(parents=True, exist_ok=True)
+            _cache_path().write_text(json.dumps(_cache), encoding="utf-8")
+        except Exception:
+            pass
 
 
 def call_agent(agent_name: str, user_content: list | str, max_tokens: int = 2048) -> dict:
@@ -40,6 +85,15 @@ def call_agent(agent_name: str, user_content: list | str, max_tokens: int = 2048
     provider = settings.llm_provider.lower()
     if provider == "mock":
         return _mock(agent_name)
+
+    cache_key = hashlib.sha256(
+        json.dumps([provider, agent_name, user_content], sort_keys=True).encode()
+    ).hexdigest()
+    if settings.llm_cache:
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return cached
+
     if provider == "gemini":
         text = _gemini(agent_name, user_content, max_tokens)
     elif provider == "ollama":
@@ -48,7 +102,10 @@ def call_agent(agent_name: str, user_content: list | str, max_tokens: int = 2048
         text = _anthropic(agent_name, user_content, max_tokens)
 
     text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
-    return json.loads(text)
+    result = json.loads(text)
+    if settings.llm_cache:
+        _cache_put(cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------- providers
@@ -95,8 +152,6 @@ def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
         if c["type"] == "image" else {"text": c["text"]}
         for c in content
     ]
-    url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{settings.gemini_model}:generateContent")
     body = {
         "system_instruction": {"parts": [{"text": load_prompt(agent_name)}]},
         "contents": [{"role": "user", "parts": parts}],
@@ -104,16 +159,31 @@ def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
     }
     # key goes in a header, never the URL — so error messages can't leak it
     headers = {"x-goog-api-key": settings.gemini_api_key}
-    for attempt in range(5):
-        _throttle()
-        resp = requests.post(url, json=body, headers=headers, timeout=120)
-        if resp.status_code in (429, 503) and attempt < 4:
-            time.sleep(30)  # free-tier rate limit — back off and retry
-            continue
-        if not resp.ok:
-            raise RuntimeError(f"Gemini error {resp.status_code}: {resp.text[:200]}")
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-    raise RuntimeError("Gemini: rate-limit retries exhausted — wait a minute and re-run")
+
+    # QUOTA SAVER #3: model fallback chain — when the primary model's quota is
+    # exhausted, automatically try the next one instead of failing the case.
+    models = [settings.gemini_model] + [
+        m.strip() for m in settings.gemini_fallback_models.split(",")
+        if m.strip() and m.strip() != settings.gemini_model
+    ]
+    last_error = ""
+    for model in models:
+        url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+               f"{model}:generateContent")
+        for attempt in range(3):
+            _throttle()
+            resp = requests.post(url, json=body, headers=headers, timeout=120)
+            if resp.status_code in (429, 503):
+                last_error = f"{model}: {resp.status_code}"
+                if attempt < 2 and resp.status_code == 503:
+                    time.sleep(15)
+                    continue
+                break  # quota — move on to the next model in the chain
+            if not resp.ok:
+                raise RuntimeError(f"Gemini error {resp.status_code}: {resp.text[:200]}")
+            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    raise RuntimeError(f"Gemini: all models exhausted ({last_error}) — "
+                       "wait for quota reset or add models to GEMINI_FALLBACK_MODELS")
 
 
 def _ollama(agent_name: str, content: list, max_tokens: int) -> str:
