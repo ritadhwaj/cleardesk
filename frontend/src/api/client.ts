@@ -10,7 +10,19 @@ api.interceptors.request.use((config) => {
 });
 
 // ---- typed helpers ----
-export interface CaseSummary { id: string; status: string; created_at: string }
+export interface CaseSummary {
+  id: string; ref_no: string; name: string; status: string; created_at: string;
+}
+export interface RunAudit {
+  run_no: number; trigger: string; note: string | null;
+  started_at: string | null; finished_at: string | null;
+  scorecard_version: number | null;
+  field_diff: {
+    added: { field: string; value: string }[];
+    updated: { field: string; old: string; new: string }[];
+    deleted: { field: string; old: string }[];
+  } | null;
+}
 export interface Scorecard {
   version: number; overall_score: number; doc_scores: Record<string, number>;
   summary: string; auto_verified: number; review_needed: number; hard_fail: number;
@@ -35,3 +47,20 @@ export const postReviewAction = (caseId: string, body: object) =>
   api.post(`/reviews/${caseId}/actions`, body);
 export const getEvents = (caseId: string, after = 0) =>
   api.get<AgentEvent[]>(`/cases/${caseId}/events`, { params: { after } }).then((r) => r.data);
+export const deleteUpload = (caseId: string, uploadId: string) =>
+  api.delete(`/cases/${caseId}/uploads/${uploadId}`);
+export const resubmitCase = (caseId: string, note: string) =>
+  api.post(`/cases/${caseId}/resubmit`, { note });
+export const exportCase = async (caseId: string, format: "xlsx" | "pdf") => {
+  const r = await api.get(`/cases/${caseId}/export`, {
+    params: { format }, responseType: "blob",
+  });
+  const cd: string = r.headers["content-disposition"] ?? "";
+  const name = cd.match(/filename="(.+?)"/)?.[1] ?? `case_scorecard.${format}`;
+  const url = URL.createObjectURL(r.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+};

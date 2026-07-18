@@ -18,7 +18,7 @@ from app.services.events import emit
 from app.services.scoring import recompute_scorecard
 
 
-async def run_pipeline(case_id: str) -> None:
+async def run_pipeline(case_id: str, run_id: str | None = None) -> None:
     """Entry point — FastAPI BackgroundTask (async, runs on the server loop)."""
     emit(case_id, "pipeline", "started",
          {"message": "Doc Agent and Audit Agent starting in parallel"})
@@ -42,6 +42,9 @@ async def run_pipeline(case_id: str) -> None:
         emit(case_id, "scorecard", "completed",
              {"message": f"Scorecard ready: {float(sc.overall_score)}% — awaiting human review",
               "overall_score": float(sc.overall_score)})
+        _finalize_run(db, case_id, run_id, sc.version)
+        _name_case(db, case_id)
+        db.commit()
     finally:
         db.close()
 
@@ -69,6 +72,43 @@ async def _write_summary(case_id: str, db) -> str:
         return result.get("summary", "")
     except Exception:  # noqa: BLE001 — summary is nice-to-have, never fatal
         return "Summary unavailable — see discrepancy list below."
+
+
+def _finalize_run(db, case_id: str, run_id: str | None, scorecard_version: int) -> None:
+    """Close out the run audit row: diff new fields vs the pre-run snapshot."""
+    from datetime import datetime
+    from app.services.scoring import fields_map, diff_fields
+    if not run_id:
+        return
+    run = db.query(models.CaseRun).get(run_id)
+    if not run:
+        return
+    run.finished_at = datetime.utcnow()
+    run.scorecard_version = scorecard_version
+    new_fields = fields_map(db, case_id)
+    if run.prev_fields is not None:
+        run.field_diff = diff_fields(run.prev_fields, new_fields)
+        changes = sum(len(v) for v in run.field_diff.values())
+        emit(case_id, "pipeline", "finding",
+             {"message": f"Retry #{run.run_no} audit: {len(run.field_diff['added'])} added, "
+                         f"{len(run.field_diff['updated'])} updated, "
+                         f"{len(run.field_diff['deleted'])} deleted "
+                         f"({changes} change(s) vs previous run)"})
+
+
+def _name_case(db, case_id: str) -> None:
+    """Give the case a human name fitting the inferred use case + applicant."""
+    from app.services.scoring import fields_map
+    case = db.query(models.Case).get(case_id)
+    if not case:
+        return
+    process = db.query(models.ProcessTemplate).get(case.inferred_process_id) \
+        if case.inferred_process_id else None
+    fields = fields_map(db, case_id)
+    applicant = next((v.title() for k, v in fields.items()
+                      if k.endswith(".name") and v), None)
+    base = process.name if process else "Document Verification"
+    case.name = f"{base} — {applicant}" if applicant else base
 
 
 def _set_status(case_id: str, status: str) -> None:

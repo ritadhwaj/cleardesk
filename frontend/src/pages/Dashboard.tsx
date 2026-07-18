@@ -35,11 +35,13 @@ export default function Dashboard() {
     return () => { live = false; clearInterval(t); };
   }, []);
 
-  const filtered = useMemo(
-    () => (cases ?? []).filter((c) =>
-      c.id.includes(query.toLowerCase()) || c.status.toLowerCase().includes(query.toLowerCase())),
-    [cases, query]
-  );
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return (cases ?? []).filter((c) =>
+      (c.ref_no ?? "").toLowerCase().includes(q) ||
+      (c.name ?? "").toLowerCase().includes(q) ||
+      c.status.toLowerCase().includes(q));
+  }, [cases, query]);
 
   const stat = (s: string) => (cases ?? []).filter((c) => c.status === s).length;
 
@@ -83,7 +85,7 @@ export default function Dashboard() {
       {/* search */}
       <div className="relative mb-4">
         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input placeholder="Search by case ID or status…" value={query}
+        <input placeholder="Search by reference, name or status…" value={query}
                onChange={(e) => setQuery(e.target.value)}
                className="input w-full !pl-10" />
       </div>
@@ -112,10 +114,14 @@ export default function Dashboard() {
                                         transition-colors animate-fade-up"
                   style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                 <td className="px-5 py-4">
-                  <Link to={`/cases/${c.id}`}
-                        className="font-mono font-medium text-slate-700 dark:text-slate-200
-                                   hover:text-slate-900 dark:hover:text-white">
-                    {c.id.slice(0, 8)}
+                  <Link to={`/cases/${c.id}`} className="group block">
+                    <span className="block font-medium text-slate-700 dark:text-slate-200
+                                     group-hover:text-slate-900 dark:group-hover:text-white">
+                      {c.name || "Verification Case"}
+                    </span>
+                    <span className="block font-mono text-[11px] tracking-wider text-slate-400 dark:text-slate-500">
+                      {c.ref_no}
+                    </span>
                   </Link>
                 </td>
                 <td className="px-5 py-4"><StatusBadge status={c.status} /></td>

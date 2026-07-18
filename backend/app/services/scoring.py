@@ -14,6 +14,32 @@ SEVERITY_PENALTY = {"INFO": 0.0, "WARN": 5.0, "FAIL": 15.0}
 REVIEW_THRESHOLD = 75.0  # field confidence below this => needs human review
 
 
+def fields_map(db: Session, case_id) -> dict:
+    """Flat snapshot of latest extracted fields: {'PAN.name': 'RITADHWAJ RAY', ...}"""
+    docs = db.query(models.Document).filter(models.Document.case_id == case_id).all()
+    codes = {t.id: t.code for t in db.query(models.DocTypeTemplate).all()}
+    out: dict[str, str] = {}
+    for d in docs:
+        code = codes.get(d.doc_type_id, "UNKNOWN")
+        latest: dict[str, models.ExtractedField] = {}
+        for f in d.fields:
+            cur = latest.get(f.field_name)
+            if cur is None or (f.extraction_round or 1) > (cur.extraction_round or 1):
+                latest[f.field_name] = f
+        for name, f in latest.items():
+            out[f"{code}.{name}"] = f.value_normalized or ""
+    return out
+
+
+def diff_fields(prev: dict, new: dict) -> dict:
+    """added / updated / deleted between two field snapshots."""
+    added = [{"field": k, "value": v} for k, v in new.items() if k not in prev]
+    deleted = [{"field": k, "old": v} for k, v in prev.items() if k not in new]
+    updated = [{"field": k, "old": prev[k], "new": v}
+               for k, v in new.items() if k in prev and prev[k] != v]
+    return {"added": added, "updated": updated, "deleted": deleted}
+
+
 def recompute_scorecard(db: Session, case_id: uuid.UUID) -> models.Scorecard:
     docs = db.query(models.Document).filter(models.Document.case_id == case_id).all()
     open_discrepancies = (

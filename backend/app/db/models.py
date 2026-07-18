@@ -43,10 +43,19 @@ class DocTypeTemplate(Base):
     validity_rules = Column(JSONB)
 
 
+def generate_ref() -> str:
+    """16-char alphanumeric case reference (unambiguous charset)."""
+    import secrets
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(16))
+
+
 class Case(Base):
     __tablename__ = "cases"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uid)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    ref_no = Column(String(16), unique=True, index=True, default=generate_ref)
+    name = Column(String, default="New Verification Case")
     status = Column(String, default="UPLOADED")
     # UPLOADED | PROCESSING | SCORED | IN_REVIEW | APPROVED | REJECTED | RETURNED
     inferred_process_id = Column(UUID(as_uuid=True), ForeignKey("process_templates.id"), nullable=True)
@@ -146,6 +155,25 @@ class ReviewAction(Base):
     corrected_value = Column(Text, nullable=True)
     note = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CaseRun(Base):
+    """Audit of every pipeline run for a case (initial + retries).
+
+    prev_fields = snapshot of extracted fields BEFORE the run,
+    field_diff  = added / updated / deleted vs that snapshot AFTER the run.
+    """
+    __tablename__ = "case_runs"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uid)
+    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"))
+    run_no = Column(Integer, default=1)
+    trigger = Column(String, default="INITIAL")  # INITIAL | RETRY
+    note = Column(Text, nullable=True)           # uploader's reason for the retry
+    prev_fields = Column(JSONB, nullable=True)   # {"PAN.name": "RITADHWAJ RAY", ...}
+    field_diff = Column(JSONB, nullable=True)    # {added:[], updated:[], deleted:[]}
+    scorecard_version = Column(Integer, nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    finished_at = Column(DateTime, nullable=True)
 
 
 class FeedbackExample(Base):

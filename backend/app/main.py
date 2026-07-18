@@ -13,6 +13,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -26,6 +27,20 @@ app.include_router(ws.router, tags=["ws"])
 def on_startup() -> None:
     # Hackathon shortcut: create tables directly. Switch to alembic for real migrations.
     models.Base.metadata.create_all(bind=engine)
+    # mini-migration: add new columns to existing installs + backfill refs
+    from sqlalchemy import text
+    from app.db.session import SessionLocal
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS ref_no VARCHAR(16)"))
+        conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS name VARCHAR"))
+    db = SessionLocal()
+    try:
+        for case in db.query(models.Case).filter(models.Case.ref_no.is_(None)).all():
+            case.ref_no = models.generate_ref()
+            case.name = case.name or "Verification Case"
+        db.commit()
+    finally:
+        db.close()
 
 
 @app.get("/health")

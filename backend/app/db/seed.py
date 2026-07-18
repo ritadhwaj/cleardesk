@@ -81,6 +81,50 @@ DOC_TYPES = [
         ],
         "validity_rules": [],
     },
+    {
+        "code": "KYC_FORM", "display_name": "KYC Application Form (filled)",
+        "expected_fields": [
+            {"name": "name", "required": True},
+            {"name": "dob", "required": True},
+            {"name": "pan_number", "regex": "^[A-Z]{5}[0-9]{4}[A-Z]$", "required": True},
+            {"name": "aadhaar_number", "required": False},
+            {"name": "mobile", "required": False},
+            {"name": "address", "required": True},
+        ],
+        "validity_rules": [],
+    },
+    {
+        "code": "LOAN_FORM", "display_name": "Loan Application Form (filled)",
+        "expected_fields": [
+            {"name": "name", "required": True},
+            {"name": "dob", "required": False},
+            {"name": "pan_number", "required": False},
+            {"name": "employer", "required": True},
+            {"name": "monthly_income", "required": True},
+            {"name": "loan_amount", "required": True},
+        ],
+        "validity_rules": [],
+    },
+    {
+        "code": "INCOME_DECL", "display_name": "Income Declaration (self-declared)",
+        "expected_fields": [
+            {"name": "name", "required": True},
+            {"name": "employer", "required": True},
+            {"name": "monthly_income", "required": True},
+            {"name": "loan_amount", "required": False},
+        ],
+        "validity_rules": [],
+    },
+    {
+        "code": "UTILITY_BILL", "display_name": "Utility Bill (address proof)",
+        "expected_fields": [
+            {"name": "name", "required": True},
+            {"name": "address", "required": True},
+            {"name": "billing_period", "required": False},
+            {"name": "amount", "required": False},
+        ],
+        "validity_rules": [],
+    },
 ]
 
 
@@ -91,8 +135,10 @@ def run() -> None:
         if db.query(models.ProcessTemplate).count() == 0:
             for t in (KYC_TEMPLATE, LOAN_TEMPLATE):
                 db.add(models.ProcessTemplate(**t))
-        if db.query(models.DocTypeTemplate).count() == 0:
-            for d in DOC_TYPES:
+        # upsert doc types by code, so re-running seed adds newly defined ones
+        existing = {t.code for t in db.query(models.DocTypeTemplate).all()}
+        for d in DOC_TYPES:
+            if d["code"] not in existing:
                 db.add(models.DocTypeTemplate(**d))
         if db.query(models.User).count() == 0:
             db.add(models.User(email="uploader@cleardesk.dev", full_name="Demo Uploader",

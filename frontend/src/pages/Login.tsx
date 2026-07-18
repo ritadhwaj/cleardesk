@@ -28,8 +28,13 @@ export default function Login() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="hidden lg:flex flex-col justify-between bg-slate-950 text-white p-12
-                      bg-[radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.15),transparent_50%)]">
+      {/* Deep indigo gradient + right border: this panel is the brand "constant" —
+          identical in both themes and clearly distinct from the dark app background. */}
+      <div className="hidden lg:flex flex-col justify-between text-white p-12
+                      bg-gradient-to-br from-[#0a1128] via-[#16204a] to-[#0a1128]
+                      border-r border-white/10
+                      shadow-[inset_-24px_0_48px_-32px_rgba(0,0,0,0.6)]">
+
         <div className="flex items-center gap-3">
           <span className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
             <ShieldCheck size={24} />
