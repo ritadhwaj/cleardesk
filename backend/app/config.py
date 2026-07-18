@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     upload_dir: str = "uploads"
     max_cross_verify_rounds: int = 3
-    llm_min_interval_s: float = 4.0  # spacing between LLM calls (free-tier friendly)
+    llm_min_interval_s: float = 6.0  # spacing between LLM calls (free-tier friendly)
 
     class Config:
         env_file = ".env"

@@ -96,21 +96,24 @@ def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
         for c in content
     ]
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{settings.gemini_model}:generateContent?key={settings.gemini_api_key}")
+           f"{settings.gemini_model}:generateContent")
     body = {
         "system_instruction": {"parts": [{"text": load_prompt(agent_name)}]},
         "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"maxOutputTokens": max_tokens, "responseMimeType": "application/json"},
     }
-    for attempt in range(4):
+    # key goes in a header, never the URL — so error messages can't leak it
+    headers = {"x-goog-api-key": settings.gemini_api_key}
+    for attempt in range(5):
         _throttle()
-        resp = requests.post(url, json=body, timeout=120)
-        if resp.status_code in (429, 503) and attempt < 3:
-            time.sleep(20)  # free-tier rate limit — back off and retry
+        resp = requests.post(url, json=body, headers=headers, timeout=120)
+        if resp.status_code in (429, 503) and attempt < 4:
+            time.sleep(30)  # free-tier rate limit — back off and retry
             continue
-        resp.raise_for_status()
+        if not resp.ok:
+            raise RuntimeError(f"Gemini error {resp.status_code}: {resp.text[:200]}")
         return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-    raise RuntimeError("Gemini: retries exhausted")
+    raise RuntimeError("Gemini: rate-limit retries exhausted — wait a minute and re-run")
 
 
 def _ollama(agent_name: str, content: list, max_tokens: int) -> str:

@@ -33,3 +33,5 @@ export const getScorecard = (caseId: string) =>
   api.get<Scorecard>(`/cases/${caseId}/scorecard`).then((r) => r.data);
 export const postReviewAction = (caseId: string, body: object) =>
   api.post(`/reviews/${caseId}/actions`, body);
+export const getEvents = (caseId: string, after = 0) =>
+  api.get<AgentEvent[]>(`/cases/${caseId}/events`, { params: { after } }).then((r) => r.data);

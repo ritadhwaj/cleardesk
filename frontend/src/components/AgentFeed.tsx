@@ -23,7 +23,9 @@ const TYPE_ICON: Record<string, string> = {
  *  Doc Agent on the left, Audit Agent on the right. The demo star. */
 export default function AgentFeed({ events }: { events: AgentEvent[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), [events]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [events]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 h-96 overflow-y-auto space-y-2">
