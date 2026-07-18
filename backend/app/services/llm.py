@@ -160,12 +160,15 @@ def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
     # key goes in a header, never the URL — so error messages can't leak it
     headers = {"x-goog-api-key": settings.gemini_api_key}
 
-    # QUOTA SAVER #3: model fallback chain — when the primary model's quota is
-    # exhausted, automatically try the next one instead of failing the case.
+    # QUOTA SAVER #3: model fallback chain — when a model is out of quota (429)
+    # or retired for this key (404), automatically try the next one.
     models = [settings.gemini_model] + [
         m.strip() for m in settings.gemini_fallback_models.split(",")
         if m.strip() and m.strip() != settings.gemini_model
     ]
+    # Last resort: ask the API which models this key can actually use.
+    models += [m for m in _discover_models(headers) if m not in models]
+
     last_error = ""
     for model in models:
         url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
@@ -173,17 +176,54 @@ def _gemini(agent_name: str, content: list, max_tokens: int) -> str:
         for attempt in range(3):
             _throttle()
             resp = requests.post(url, json=body, headers=headers, timeout=120)
-            if resp.status_code in (429, 503):
+            if resp.status_code in (404, 429, 503):
                 last_error = f"{model}: {resp.status_code}"
                 if attempt < 2 and resp.status_code == 503:
                     time.sleep(15)
                     continue
-                break  # quota — move on to the next model in the chain
+                break  # retired model or quota — move on to the next model
             if not resp.ok:
                 raise RuntimeError(f"Gemini error {resp.status_code}: {resp.text[:200]}")
+            _remember_working_model(model)
             return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-    raise RuntimeError(f"Gemini: all models exhausted ({last_error}) — "
-                       "wait for quota reset or add models to GEMINI_FALLBACK_MODELS")
+    raise RuntimeError(f"Gemini: no usable model found (last: {last_error}) — "
+                       "check quota at https://aistudio.google.com")
+
+
+_discovered: list | None = None
+_preferred: str | None = None
+
+
+def _remember_working_model(model: str) -> None:
+    """Promote the model that worked to the front for subsequent calls."""
+    global _preferred
+    if _preferred != model:
+        _preferred = model
+        settings.gemini_model = model
+
+
+def _discover_models(headers: dict) -> list[str]:
+    """Ask the API for generateContent-capable flash models this key can use."""
+    global _discovered
+    if _discovered is not None:
+        return _discovered
+    import requests
+    try:
+        r = requests.get("https://generativelanguage.googleapis.com/v1beta/models",
+                         headers=headers, timeout=30)
+        r.raise_for_status()
+        names = [
+            m["name"].removeprefix("models/")
+            for m in r.json().get("models", [])
+            if "generateContent" in m.get("supportedGenerationMethods", [])
+        ]
+        # prefer cheap flash/lite models; skip exotic previews last
+        flash = [n for n in names if "flash" in n]
+        flash.sort(key=lambda n: ("preview" in n, "lite" not in n, n))
+        _discovered = flash[:6]
+    except Exception:
+        _discovered = []
+    return _discovered
 
 
 def _ollama(agent_name: str, content: list, max_tokens: int) -> str:

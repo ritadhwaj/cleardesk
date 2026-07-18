@@ -11,12 +11,14 @@ from pathlib import Path
 
 import requests
 
+# Static list kept as backup; the script now primarily tests whatever
+# models the API says your key can see.
 CANDIDATES = [
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-flash-latest",
 ]
 
 
@@ -35,6 +37,7 @@ def main() -> None:
     headers = {"x-goog-api-key": key}
 
     print("Models your key can see:")
+    discovered: list[str] = []
     r = requests.get("https://generativelanguage.googleapis.com/v1beta/models",
                      headers=headers, timeout=30)
     if r.ok:
@@ -42,11 +45,15 @@ def main() -> None:
                  if "generateContent" in m.get("supportedGenerationMethods", [])]
         for n in names:
             print("  -", n)
+        # test the key's own flash models first — they're current by definition
+        discovered = sorted([n for n in names if "flash" in n],
+                            key=lambda n: ("preview" in n, "lite" not in n, n))
     else:
         print("  (list failed:", r.status_code, r.text[:120], ")")
 
+    to_test = discovered[:6] + [c for c in CANDIDATES if c not in discovered]
     print("\nTesting generateContent on candidates:")
-    for model in CANDIDATES:
+    for model in to_test:
         r = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
             headers=headers, timeout=60,
