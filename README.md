@@ -70,7 +70,7 @@ docker compose up -d
 cd backend
 python -m venv .venv && .venv\Scripts\activate    # Windows
 pip install -r requirements.txt
-copy .env.example .env                            # add your ANTHROPIC_API_KEY
+copy .env.example .env                            # LLM_PROVIDER=mock works with no API key
 python -m app.db.seed                             # templates + demo users
 uvicorn app.main:app --reload                     # http://localhost:8000/docs
 
