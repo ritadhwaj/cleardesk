@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import (
     Column, String, Integer, Numeric, Text, DateTime, ForeignKey, JSON
@@ -8,6 +8,15 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def now_ist() -> datetime:
+    """Canonical storage timestamp: IST wall-clock (naive). Every date/time in
+    the database is stored in IST; the frontend converts to the viewer's chosen
+    timezone for display."""
+    return datetime.now(IST).replace(tzinfo=None)
 
 
 def uid() -> uuid.UUID:
@@ -21,7 +30,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     full_name = Column(String)
     role = Column(String, default="uploader")  # uploader | reviewer | admin
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
 
 class ProcessTemplate(Base):
@@ -61,8 +70,8 @@ class Case(Base):
     # UPLOADED | PROCESSING | SCORED | IN_REVIEW | APPROVED | REJECTED | RETURNED
     inferred_process_id = Column(UUID(as_uuid=True), ForeignKey("process_templates.id"), nullable=True)
     inference_confidence = Column(Numeric(5, 2), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     documents = relationship("Document", back_populates="case")
 
@@ -74,7 +83,7 @@ class Upload(Base):
     file_path = Column(String, nullable=False)
     mime_type = Column(String)
     page_count = Column(Integer)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_at = Column(DateTime, default=now_ist)
 
 
 class Document(Base):
@@ -128,7 +137,7 @@ class AgentEvent(Base):
     agent = Column(String)       # intake | classifier | extractor | verifier | cross_verifier | compliance | scorecard
     event_type = Column(String)  # started | finding | dispute | rebuttal | resolved | completed
     payload = Column(JSONB)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
 
 class Scorecard(Base):
@@ -142,7 +151,7 @@ class Scorecard(Base):
     auto_verified_count = Column(Integer, default=0)
     review_needed_count = Column(Integer, default=0)
     hard_fail_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
 
 class ReviewAction(Base):
@@ -155,7 +164,7 @@ class ReviewAction(Base):
     action = Column(String)  # ACCEPT | CORRECT | REJECT_DOC | REQUEST_REUPLOAD | APPROVE_CASE | REJECT_CASE
     corrected_value = Column(Text, nullable=True)
     note = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
 
 class ActivityLog(Base):
@@ -170,7 +179,7 @@ class ActivityLog(Base):
     category = Column(String)   # AUTH | CASE | DOCUMENT | REVIEW | RETRY | EXPORT
     action = Column(String)     # LOGIN, CASE_CREATED, FILES_UPLOADED, RUN_STARTED, ...
     details = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
 
 class CaseRun(Base):
@@ -188,7 +197,7 @@ class CaseRun(Base):
     prev_fields = Column(JSONB, nullable=True)   # {"PAN.name": "RITADHWAJ RAY", ...}
     field_diff = Column(JSONB, nullable=True)    # {added:[], updated:[], deleted:[]}
     scorecard_version = Column(Integer, nullable=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=now_ist)
     finished_at = Column(DateTime, nullable=True)
 
 
@@ -201,4 +210,4 @@ class FeedbackExample(Base):
     wrong_value = Column(Text)
     correct_value = Column(Text)
     context_note = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)

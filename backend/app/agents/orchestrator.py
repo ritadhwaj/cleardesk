@@ -78,12 +78,13 @@ def _finalize_run(db, case_id: str, run_id: str | None, scorecard_version: int) 
     """Close out the run audit row: diff new fields vs the pre-run snapshot."""
     from datetime import datetime
     from app.services.scoring import fields_map, diff_fields
+    from app.db.models import now_ist
     if not run_id:
         return
     run = db.query(models.CaseRun).get(run_id)
     if not run:
         return
-    run.finished_at = datetime.utcnow()
+    run.finished_at = now_ist()
     run.scorecard_version = scorecard_version
     new_fields = fields_map(db, case_id)
     if run.prev_fields is not None:

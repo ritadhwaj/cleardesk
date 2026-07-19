@@ -16,16 +16,23 @@ export interface CaseSummary {
   created_at: string; updated_at: string;
 }
 
-/** dd-MMM-yyyy hh:mm:ss +TZ, in the viewer's timezone (backend sends UTC). */
+import { useTimezone } from "../store/timezone";
+
+/** Render a backend timestamp (stored in IST) as dd-MMM-yyyy HH:mm:ss GMT±x in
+ *  the user's selected display timezone. Naive strings are treated as IST. */
 export const fmtDateTime = (iso: string) => {
   if (!iso) return "—";
-  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mon = d.toLocaleString("en-GB", { month: "short" });
-  const time = d.toTimeString().slice(0, 8);
-  const tz = new Intl.DateTimeFormat("en", { timeZoneName: "shortOffset" })
-    .formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "";
-  return `${dd}-${mon}-${d.getFullYear()} ${time} ${tz}`;
+  const hasZone = iso.endsWith("Z") || /[+-]\d\d:?\d\d$/.test(iso);
+  const d = new Date(hasZone ? iso : iso + "+05:30");   // stored value is IST
+  const tz = useTimezone.getState().tz;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz, day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    timeZoneName: "shortOffset",
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("day")}-${get("month")}-${get("year")} `
+       + `${get("hour")}:${get("minute")}:${get("second")} ${get("timeZoneName")}`;
 };
 export interface RunAudit {
   run_no: number; trigger: string; note: string | null;

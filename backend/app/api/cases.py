@@ -228,12 +228,13 @@ def case_insights(status: str, db: Session = Depends(get_db),
     """On-time vs overdue analytics for one status bucket.
     Decided cases (APPROVED/REJECTED): on time if decided within SLA of creation.
     Awaiting cases (IN_REVIEW): overdue once they've waited longer than SLA."""
-    from datetime import datetime, timedelta
+    from datetime import timedelta
+    from app.db.models import now_ist
     if status not in ("IN_REVIEW", "APPROVED", "REJECTED"):
         raise HTTPException(400, "status must be IN_REVIEW, APPROVED or REJECTED")
 
     sla = timedelta(hours=SLA_HOURS)
-    now = datetime.utcnow()
+    now = now_ist()
     processes = {p.id: p.code for p in db.query(models.ProcessTemplate).all()}
     cases = db.query(models.Case).filter(models.Case.status == status).all()
 

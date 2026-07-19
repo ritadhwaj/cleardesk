@@ -13,6 +13,7 @@ import {
 } from "../api/client";
 import DataTable, { type Column } from "../components/DataTable";
 import { useAuth } from "../store/auth";
+import { useTimezone } from "../store/timezone";
 import AgentFeed from "../components/AgentFeed";
 import ScorecardPanel from "../components/ScorecardPanel";
 import PipelineStepper from "../components/PipelineStepper";
@@ -95,6 +96,7 @@ export default function CaseDetail() {
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const role = useAuth((s) => s.role);
+  useTimezone((s) => s.tz);
 
   const refresh = () => { if (caseId) getCase(caseId).then(setDetail).catch(() => {}); };
   useEffect(refresh, [caseId,

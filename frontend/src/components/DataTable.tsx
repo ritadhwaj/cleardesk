@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
 import type { TableQuery, Paged } from "../api/client";
+import { useTimezone } from "../store/timezone";
 
 export interface Column<T> {
   key: string;                       // sort/filter key sent to the server
@@ -37,6 +38,7 @@ export default function DataTable<T>({
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [debounced, setDebounced] = useState(filters);
   const seq = useRef(0);
+  useTimezone((s) => s.tz);   // re-render cells when the display timezone changes
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(filters), 350);

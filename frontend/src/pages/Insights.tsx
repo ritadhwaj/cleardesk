@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { getInsights, fmtDateTime, type Insights } from "../api/client";
+import { useTimezone } from "../store/timezone";
 
 const META: Record<string, { title: string; Icon: typeof Clock; tint: string }> = {
   IN_REVIEW: { title: "Awaiting review", Icon: Clock, tint: "text-amber-500" },
@@ -43,6 +44,7 @@ export default function InsightsPage() {
   const { status = "" } = useParams();
   const [data, setData] = useState<Insights | null>(null);
   const meta = META[status] ?? META.IN_REVIEW;
+  useTimezone((s) => s.tz);
 
   useEffect(() => { getInsights(status).then(setData).catch(() => {}); }, [status]);
 

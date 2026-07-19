@@ -2,7 +2,9 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ShieldCheck, LayoutDashboard, FilePlus2, ClipboardCheck, Activity, LogOut } from "lucide-react";
 import { useAuth } from "../store/auth";
 import ThemeToggle from "./ThemeToggle";
+import Clock from "./Clock";
 import OfficeScene from "./OfficeScene";
+import { useTimezone } from "../store/timezone";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -15,6 +17,8 @@ const links = [
 export default function Layout() {
   const { role, fullName, logout } = useAuth();
   const navigate = useNavigate();
+  // subscribe so a timezone change re-renders every page's dates
+  useTimezone((s) => s.tz);
 
   return (
     <div className="min-h-screen flex flex-col relative">
@@ -53,6 +57,7 @@ export default function Layout() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <div className="hidden lg:block"><Clock /></div>
             <ThemeToggle />
             <div className="hidden md:flex flex-col items-end leading-tight">
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{fullName}</span>
@@ -71,14 +76,16 @@ export default function Layout() {
       </header>
 
       <div className="flex-1 flex relative">
-        {/* office scene sidebar: a true quarter of the screen, sticky while content scrolls */}
-        <aside className="hidden xl:block w-1/4 min-w-[300px] relative shrink-0
-                          border-r border-slate-200/70 dark:border-slate-800/70
-                          bg-gradient-to-b from-slate-50 to-slate-100
-                          dark:from-slate-950 dark:to-black
+        {/* office scene sidebar: ~28% wide, sticky; its right edge fades into
+            the dashboard so the two panels blend seamlessly */}
+        <aside className="hidden xl:block w-[28%] min-w-[320px] relative shrink-0
                           transition-colors duration-700">
-          <div className="sticky top-16 h-[calc(100vh-4rem)]">
+          <div className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden">
             <OfficeScene />
+            {/* fade the scene into the page background at the seam */}
+            <div className="absolute inset-y-0 right-0 w-28 pointer-events-none
+                            bg-gradient-to-r from-transparent to-slate-50 dark:to-slate-950
+                            transition-colors duration-700" />
           </div>
         </aside>
 
