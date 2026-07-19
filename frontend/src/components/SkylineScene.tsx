@@ -6,13 +6,13 @@ import { useTheme } from "../store/theme";
  *  Toggling back plays the reverse: moonset into sunrise. */
 
 const BUILDINGS = [
-  { x: 8, w: 62, h: 250 }, { x: 78, w: 84, h: 380 }, { x: 170, w: 64, h: 300 },
-  { x: 242, w: 92, h: 440 }, { x: 342, w: 52, h: 230 },
+  { x: 16, w: 96, h: 250 }, { x: 128, w: 120, h: 390 }, { x: 268, w: 96, h: 300 },
+  { x: 384, w: 132, h: 450 }, { x: 536, w: 88, h: 260 }, { x: 644, w: 118, h: 360 },
 ];
 
-const STARS = Array.from({ length: 18 }, (_, i) => ({
-  cx: (i * 73 + 31) % 390 + 5, cy: (i * 47 + 13) % 260 + 10,
-  r: i % 3 === 0 ? 1.6 : 1, delay: `${(i % 5) * 0.35}s`,
+const STARS = Array.from({ length: 24 }, (_, i) => ({
+  cx: (i * 137 + 31) % 780 + 10, cy: (i * 47 + 13) % 240 + 12,
+  r: i % 3 === 0 ? 2 : 1.2, delay: `${(i % 5) * 0.35}s`,
 }));
 
 export default function SkylineScene() {
@@ -22,7 +22,7 @@ export default function SkylineScene() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-      <svg viewBox="0 0 400 600" className="w-full h-full" preserveAspectRatio="xMidYMax slice">
+      <svg viewBox="0 0 800 680" className="w-full h-full" preserveAspectRatio="xMidYMax slice">
         <defs>
           <linearGradient id="daySky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#7dd3fc" /><stop offset="100%" stopColor="#f0f9ff" />
@@ -34,8 +34,8 @@ export default function SkylineScene() {
         </defs>
 
         {/* sky crossfade */}
-        <rect width="400" height="600" fill="url(#daySky)" style={{ ...t(1400), opacity: dark ? 0 : 1 }} />
-        <rect width="400" height="600" fill="url(#nightSky)" style={{ ...t(1400), opacity: dark ? 1 : 0 }} />
+        <rect width="800" height="680" fill="url(#daySky)" style={{ ...t(1400), opacity: dark ? 0 : 1 }} />
+        <rect width="800" height="680" fill="url(#nightSky)" style={{ ...t(1400), opacity: dark ? 1 : 0 }} />
 
         {/* stars twinkle out at night */}
         {STARS.map((s, i) => (
@@ -45,21 +45,21 @@ export default function SkylineScene() {
         ))}
 
         {/* sun: high at day -> arcs down past the towers to set */}
-        <g style={{ ...t(1600), transform: dark ? "translate(70px, 470px)" : "translate(0px, 0px)" }}>
-          <circle cx="100" cy="130" r="34" fill="#fbbf24" opacity="0.55" filter="url(#glow)" />
-          <circle cx="100" cy="130" r="24" fill="#fcd34d" />
+        <g style={{ ...t(1600), transform: dark ? "translate(140px, 560px)" : "translate(0px, 0px)" }}>
+          <circle cx="180" cy="130" r="48" fill="#fbbf24" opacity="0.55" filter="url(#glow)" />
+          <circle cx="180" cy="130" r="34" fill="#fcd34d" />
         </g>
         {/* moon: rises as the sun sets */}
-        <g style={{ ...t(1600, 350), transform: dark ? "translate(0px, 0px)" : "translate(-50px, 480px)" }}>
-          <circle cx="300" cy="120" r="26" fill="#f1f5f9" opacity="0.5" filter="url(#glow)" />
-          <circle cx="300" cy="120" r="19" fill="#f8fafc" />
-          <circle cx="294" cy="114" r="4" fill="#cbd5e1" opacity="0.7" />
-          <circle cx="305" cy="126" r="2.5" fill="#cbd5e1" opacity="0.6" />
+        <g style={{ ...t(1600, 350), transform: dark ? "translate(0px, 0px)" : "translate(-90px, 580px)" }}>
+          <circle cx="600" cy="120" r="36" fill="#f1f5f9" opacity="0.5" filter="url(#glow)" />
+          <circle cx="600" cy="120" r="27" fill="#f8fafc" />
+          <circle cx="591" cy="111" r="6" fill="#cbd5e1" opacity="0.7" />
+          <circle cx="607" cy="129" r="3.5" fill="#cbd5e1" opacity="0.6" />
         </g>
 
         {/* towers + windows that light up at night */}
         {BUILDINGS.map((b, bi) => {
-          const y = 600 - b.h;
+          const y = 680 - b.h;
           const cols = Math.floor((b.w - 14) / 15);
           const rows = Math.floor((b.h - 24) / 22);
           return (
