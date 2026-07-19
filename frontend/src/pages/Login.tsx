@@ -101,6 +101,7 @@ export default function Login() {
             <p className="font-semibold text-slate-600 dark:text-slate-300">Demo accounts (password: demo1234)</p>
             <p>uploader@cleardesk.dev — submits documents</p>
             <p>reviewer@cleardesk.dev — approves cases</p>
+            <p>admin@cleardesk.dev — superuser (all actions)</p>
           </div>
         </form>
       </div>

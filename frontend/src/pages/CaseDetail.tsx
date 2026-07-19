@@ -338,7 +338,7 @@ export default function CaseDetail() {
               Nothing flagged — all findings auto-verified.
             </p>
           )}
-          {role === "reviewer" && detail?.status === "IN_REVIEW" && (
+          {(role === "reviewer" || role === "admin") && detail?.status === "IN_REVIEW" && (
             <div className="card p-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Final decision — the agents advise,{" "}

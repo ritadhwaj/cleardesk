@@ -228,11 +228,17 @@ def run() -> None:
         for d in DOC_TYPES:
             if d["code"] not in existing:
                 db.add(models.DocTypeTemplate(**d))
-        if db.query(models.User).count() == 0:
-            db.add(models.User(email="uploader@cleardesk.dev", full_name="Demo Uploader",
-                               password_hash=bcrypt.hash("demo1234"), role="uploader"))
-            db.add(models.User(email="reviewer@cleardesk.dev", full_name="Demo Reviewer",
-                               password_hash=bcrypt.hash("demo1234"), role="reviewer"))
+        # upsert demo users by email so re-running adds newly defined accounts
+        demo_users = [
+            ("uploader@cleardesk.dev", "Demo Uploader", "uploader"),
+            ("reviewer@cleardesk.dev", "Demo Reviewer", "reviewer"),
+            ("admin@cleardesk.dev", "Demo Admin", "admin"),   # superuser: can do everything
+        ]
+        existing_u = {u.email for u in db.query(models.User).all()}
+        for email, name, role in demo_users:
+            if email not in existing_u:
+                db.add(models.User(email=email, full_name=name,
+                                   password_hash=bcrypt.hash("demo1234"), role=role))
         db.commit()
         print("Seed complete.")
     finally:
