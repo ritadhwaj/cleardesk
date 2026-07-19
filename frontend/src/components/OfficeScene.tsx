@@ -75,6 +75,14 @@ export default function OfficeScene() {
             <stop offset="0%" stopColor="#232b38" /><stop offset="100%" stopColor="#141a24" />
           </linearGradient>
           <clipPath id="winClip"><rect x="256" y="150" width="188" height="270" rx="8" /></clipPath>
+          <clipPath id="artClip"><rect x="66" y="216" width="116" height="92" /></clipPath>
+          <linearGradient id="artSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fcd34d" /><stop offset="55%" stopColor="#fb7185" />
+            <stop offset="100%" stopColor="#a855f7" />
+          </linearGradient>
+          <radialGradient id="lampWarm">
+            <stop offset="0%" stopColor="#fde68a" /><stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+          </radialGradient>
         </defs>
 
         {/* wall + floor */}
@@ -151,6 +159,28 @@ export default function OfficeScene() {
                 style={{ transition: `stroke 1300ms ${EASE}`, stroke: dark ? "#334155" : "#94a3b8" }} />
         </g>
 
+        {/* ---- framed art on the wall (left of window) ---- */}
+        <g>
+          {/* drop shadow */}
+          <rect x="58" y="212" width="140" height="112" rx="4"
+                style={{ transition: `opacity 1300ms ${EASE}`, fill: "#000",
+                         opacity: dark ? 0.4 : 0.14 }} transform="translate(4 5)" />
+          {/* gilt frame */}
+          <rect x="54" y="208" width="140" height="112" rx="4"
+                style={fill("#c8a24a", "#7c6a34")} />
+          <rect x="62" y="216" width="124" height="96"
+                style={fill("#f8fafc", "#0f1420")} />
+          {/* the artwork: colourful sunset landscape (stays vivid, dims slightly at night) */}
+          <g clipPath="url(#artClip)"
+             style={{ transition: `opacity 1300ms ${EASE}`, opacity: dark ? 0.82 : 1 }}>
+            <rect x="66" y="220" width="116" height="88" fill="url(#artSky)" />
+            <circle cx="150" cy="250" r="15" fill="#fb923c" />
+            <path d="M 66 292 Q 96 262 124 292 T 182 288 L 182 308 L 66 308 Z" fill="#c2410c" />
+            <path d="M 66 300 Q 100 276 134 300 T 182 298 L 182 308 L 66 308 Z" fill="#7c2d12" />
+            <path d="M 66 304 Q 110 288 150 304 T 182 304 L 182 308 L 66 308 Z" fill="#4c1d0f" />
+          </g>
+        </g>
+
         {/* ---- sunbeam + glare pool (day only) ---- */}
         <polygon points="256,190 256,420 40,900 0,760 0,560" fill="url(#beamG)"
                  style={fade(!dark, 1500)} />
@@ -183,33 +213,85 @@ export default function OfficeScene() {
           </g>
         ))}
 
-        {/* ---- desk (2.5-D) ---- */}
+        {/* ---- desk (2.5-D) with colourful desk items ---- */}
         <g>
           {/* shadow */}
           <ellipse cx="235" cy="800" rx="200" ry="22"
                    style={{ transition: `fill 1300ms ${EASE}, opacity 1300ms ${EASE}`,
                             fill: "#000000", opacity: dark ? 0.5 : 0.12 }} />
-          {/* top surface with slight perspective */}
-          <polygon points="70,676 400,676 424,700 46,700" fill="url(#deskTopDay)" style={fade(!dark)} />
-          <polygon points="70,676 400,676 424,700 46,700" fill="url(#deskTopNight)" style={fade(dark)} />
+          {/* warm wooden desktop (colour in both themes, richer at night) */}
+          <polygon points="70,676 400,676 424,700 46,700"
+                   style={fill("#c9964e", "#6b4b2a")} />
+          <polygon points="70,676 400,676 400,680 70,680"
+                   style={fill("#e0b877", "#7c5a34")} opacity="0.7" />
           {/* front edge */}
           <rect x="46" y="700" width="378" height="14" rx="3"
-                style={fill("#cbd5e1", "#0d131d")} />
+                style={fill("#a9743c", "#4a3320")} />
           {/* legs */}
-          <rect x="70" y="714" width="12" height="86" style={fill("#b6c2d1", "#151b26")} />
-          <rect x="390" y="714" width="12" height="86" style={fill("#b6c2d1", "#151b26")} />
-          {/* monitor */}
-          <rect x="170" y="592" width="120" height="74" rx="6" strokeWidth="4"
+          <rect x="70" y="714" width="12" height="86" style={fill("#8f6234", "#2c1e12")} />
+          <rect x="390" y="714" width="12" height="86" style={fill("#8f6234", "#2c1e12")} />
+
+          {/* monitor showing a little dashboard */}
+          <rect x="166" y="586" width="128" height="80" rx="6" strokeWidth="4"
                 style={{ transition: `fill 1300ms ${EASE}, stroke 1300ms ${EASE}`,
-                         fill: dark ? "#0f172a" : "#f1f5f9", stroke: dark ? "#475569" : "#9db0c4" }} />
-          <rect x="176" y="598" width="108" height="62" rx="4" fill="#38bdf8"
-                style={{ ...fade(dark, 900, 1300), opacity: dark ? 0.3 : 0 }} />
-          <rect x="220" y="666" width="20" height="9" style={fill("#9db0c4", "#374151")} />
-          {/* mug + plant */}
-          <rect x="320" y="654" width="18" height="20" rx="3" style={fill("#e2e8f0", "#1f2937")} />
-          <rect x="120" y="640" width="24" height="26" rx="4" style={fill("#dbe3ec", "#1f2937")} />
-          <path d="M 132 640 C 120 616 121 606 132 594 C 143 606 145 618 132 640 Z"
-                style={fill("#4ade80", "#14532d")} />
+                         fill: dark ? "#0b1220" : "#1e293b", stroke: dark ? "#475569" : "#334155" }} />
+          {/* screen content: header bar + coloured chart bars */}
+          <rect x="172" y="592" width="116" height="12" rx="2" fill="#3b82f6" opacity="0.85" />
+          <rect x="176" y="612" width="14" height="46" rx="1.5" fill="#38bdf8" />
+          <rect x="196" y="626" width="14" height="32" rx="1.5" fill="#34d399" />
+          <rect x="216" y="618" width="14" height="40" rx="1.5" fill="#fbbf24" />
+          <rect x="236" y="634" width="14" height="24" rx="1.5" fill="#f472b6" />
+          <rect x="256" y="606" width="26" height="52" rx="2" fill="#1e293b" opacity="0.5" />
+          <circle cx="269" cy="628" r="9" fill="none" stroke="#a78bfa" strokeWidth="3.5" />
+          <rect x="222" y="666" width="16" height="9" style={fill("#94a3b8", "#374151")} />
+          <rect x="206" y="675" width="48" height="5" rx="2" style={fill("#94a3b8", "#374151")} />
+
+          {/* keyboard */}
+          <polygon points="188,684 272,684 280,694 180,694"
+                   style={fill("#e2e8f0", "#2b3546")} />
+          {[192, 205, 218, 231, 244, 257].map((kx) => (
+            <rect key={kx} x={kx} y="686" width="9" height="4" rx="1"
+                  style={fill("#cbd5e1", "#3b475a")} />
+          ))}
+
+          {/* stack of colourful books (left) */}
+          <rect x="70" y="664" width="52" height="8" rx="1.5" fill="#ef4444" />
+          <rect x="74" y="656" width="48" height="8" rx="1.5" fill="#3b82f6" />
+          <rect x="72" y="648" width="50" height="8" rx="1.5" fill="#f59e0b" />
+          <rect x="78" y="640" width="42" height="8" rx="1.5" fill="#10b981" />
+
+          {/* pen holder with coloured pens */}
+          <rect x="128" y="652" width="22" height="24" rx="3" style={fill("#cbd5e1", "#334155")} />
+          <line x1="134" y1="652" x2="131" y2="632" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+          <line x1="140" y1="652" x2="141" y2="628" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
+          <line x1="146" y1="652" x2="149" y2="634" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
+
+          {/* coffee mug with handle + steam */}
+          <rect x="300" y="654" width="22" height="22" rx="3" fill="#0d9488" />
+          <path d="M 322 658 q 9 0 9 7 t -9 7" fill="none" stroke="#0d9488" strokeWidth="3" />
+          <ellipse cx="311" cy="654" rx="11" ry="3" fill="#5eead4" />
+          <path d="M 307 650 q -4 -8 2 -14" fill="none" stroke="#cbd5e1" strokeWidth="2"
+                strokeLinecap="round" opacity={dark ? 0.35 : 0.6} />
+          <path d="M 314 650 q 4 -8 -2 -14" fill="none" stroke="#cbd5e1" strokeWidth="2"
+                strokeLinecap="round" opacity={dark ? 0.35 : 0.6} />
+
+          {/* sticky note on the desk */}
+          <rect x="150" y="668" width="20" height="18" rx="1" fill="#fde047"
+                transform="rotate(-8 160 677)" />
+
+          {/* potted plant (terracotta) */}
+          <path d="M 356 656 L 378 656 L 375 676 L 359 676 Z" fill="#e07a5f" />
+          <rect x="356" y="652" width="22" height="6" rx="1" fill="#c96a4f" />
+          <path d="M 367 652 C 352 626 355 616 367 606 C 379 616 382 628 367 652 Z" fill="#22c55e" />
+          <path d="M 367 652 C 360 632 356 626 350 620 C 360 622 368 634 367 652 Z" fill="#16a34a" />
+          <path d="M 367 652 C 374 632 378 626 384 620 C 374 622 366 634 367 652 Z" fill="#16a34a" />
+
+          {/* small desk lamp (right) with warm glow at night */}
+          <rect x="392" y="662" width="26" height="6" rx="2" style={fill("#64748b", "#334155")} />
+          <line x1="405" y1="662" x2="400" y2="628" stroke={dark ? "#475569" : "#64748b"} strokeWidth="3" />
+          <line x1="400" y1="628" x2="386" y2="614" stroke={dark ? "#475569" : "#64748b"} strokeWidth="3" />
+          <path d="M 378 606 L 396 610 L 390 624 L 374 618 Z" style={fill("#475569", "#1f2937")} />
+          <circle cx="385" cy="616" r="18" fill="url(#lampWarm)" style={fade(dark, 600, 1400)} />
         </g>
 
         {/* ---- chair facing the desk ---- */}

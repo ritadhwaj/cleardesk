@@ -71,9 +71,11 @@ export default function Layout() {
       </header>
 
       <div className="flex-1 flex relative">
-        {/* office scene sidebar: quarter of the screen, sticky while content scrolls */}
-        <aside className="hidden xl:block w-1/4 max-w-[380px] relative shrink-0
+        {/* office scene sidebar: a true quarter of the screen, sticky while content scrolls */}
+        <aside className="hidden xl:block w-1/4 min-w-[300px] relative shrink-0
                           border-r border-slate-200/70 dark:border-slate-800/70
+                          bg-gradient-to-b from-slate-50 to-slate-100
+                          dark:from-slate-950 dark:to-black
                           transition-colors duration-700">
           <div className="sticky top-16 h-[calc(100vh-4rem)]">
             <OfficeScene />
