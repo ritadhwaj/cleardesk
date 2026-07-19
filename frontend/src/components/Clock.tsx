@@ -31,15 +31,17 @@ export default function Clock() {
                          bg-white/70 dark:bg-slate-900/60 backdrop-blur
                          hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
         <Globe2 size={16} className="text-indigo-500 shrink-0 group-hover:rotate-12 transition-transform" />
-        <div className="flex flex-col items-start leading-none gap-0.5">
-          <span className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">
+        <div className="flex flex-col items-start leading-tight gap-0.5">
+          <span className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">
             {date}
           </span>
-          <span className="font-mono text-[13px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">
-            {time}
-          </span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 tracking-wide">
-            {opt.city} · {offset}
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="font-mono text-[13px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">
+              {time}
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 tracking-wide">
+              {opt.city} · {offset}
+            </span>
           </span>
         </div>
       </button>
