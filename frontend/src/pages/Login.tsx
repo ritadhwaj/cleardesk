@@ -3,6 +3,7 @@ import { ShieldCheck, Loader2 } from "lucide-react";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
 import ThemeToggle from "../components/ThemeToggle";
+import SkylineScene from "../components/SkylineScene";
 
 export default function Login() {
   const login = useAuth((s) => s.login);
@@ -54,10 +55,15 @@ export default function Login() {
         <p className="text-xs text-slate-500">KYC · Loan Applications · Tax Filing</p>
       </div>
 
-      {/* Form panel */}
-      <div className="relative flex items-center justify-center p-8">
-        <div className="absolute top-6 right-6"><ThemeToggle /></div>
-        <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-fade-up">
+      {/* Form panel — animated skyline behind, glass card in front */}
+      <div className="relative flex items-center justify-center p-8 overflow-hidden">
+        <SkylineScene />
+        <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
+        <form onSubmit={submit}
+              className="relative z-10 w-full max-w-sm space-y-5 animate-fade-up
+                         bg-white/80 dark:bg-slate-950/75 backdrop-blur-xl
+                         rounded-3xl p-8 border border-white/50 dark:border-slate-700/50
+                         shadow-2xl transition-colors duration-700">
           <div className="lg:hidden flex items-center gap-2.5 mb-2">
             <span className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
               <ShieldCheck size={20} />

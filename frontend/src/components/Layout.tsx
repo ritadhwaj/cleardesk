@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ShieldCheck, LayoutDashboard, FilePlus2, ClipboardCheck, Activity, LogOut } from "lucide-react";
 import { useAuth } from "../store/auth";
 import ThemeToggle from "./ThemeToggle";
+import OfficeScene from "./OfficeScene";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -16,7 +17,8 @@ export default function Layout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <OfficeScene />
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80
                          border-b border-slate-200/70 dark:border-slate-800/70
                          transition-colors duration-500">
@@ -69,11 +71,11 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="flex-1 animate-fade-in">
+      <main className="flex-1 animate-fade-in relative z-10">
         <Outlet />
       </main>
 
-      <footer className="border-t border-slate-200/70 dark:border-slate-800/70 py-4 transition-colors duration-500">
+      <footer className="relative z-10 border-t border-slate-200/70 dark:border-slate-800/70 py-4 transition-colors duration-500">
         <p className="text-center text-xs text-slate-400 dark:text-slate-500">
           ClearDesk · AI reads the pages, humans make the decisions · Demo build
         </p>
