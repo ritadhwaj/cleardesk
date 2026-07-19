@@ -1,5 +1,77 @@
 # ClearDesk — Full System Design
-### Multi-Agent Document Verification Desk for Banking (KYC / Loan / Tax Filing)
+### Multi-Agent Document Verification Desk for Banking
+
+---
+
+## 0. As-Built Addendum (current implementation)
+
+> Sections 1–8 below are the **original design plan**. The system was then built
+> and extended significantly; this addendum is the source of truth for what
+> actually ships today. Where they differ, this section wins.
+
+### Architecture as built
+
+- **Two parallel agents, not a sequential graph.** Instead of an
+  Extractor→Cross-Verifier pipeline, a **Doc Agent** (documenter) and an
+  **Audit Agent** (adversary) run *concurrently* via an asyncio orchestrator and
+  converse over an in-process **message bus** (`app/agents/bus.py`). Protocol:
+  `DOC_CLAIM · CHALLENGE · DEFEND · CONCEDE · VERDICT · DOCS_COMPLETE ·
+  AUDIT_COMPLETE`. Every message is persisted to `agent_events` and streamed to
+  the UI over WebSocket. LangGraph is **not** used.
+- **Blind-read auditing.** The Audit Agent independently reads the same evidence
+  without seeing the Doc Agent's claim, then compares — so agreement is real
+  corroboration. Disagreements loop back as challenges (max 3 rounds), then
+  become human-review discrepancies.
+- **Deterministic scoring.** `services/scoring.py` computes the score from field
+  confidences and open-discrepancy penalties; the LLM only writes the summary.
+- **Data-driven process inference.** `doc_agent._infer_process` scores every
+  `process_templates` row by how well the classified docs cover its required
+  docs. New bank services = new template rows, no code.
+
+### Pluggable LLM layer (`services/llm.py`)
+
+Provider selected by `LLM_PROVIDER`: **mock** (no key, canned responses, full
+app runs offline), **gemini** (free tier, vision), **ollama** (local), or
+**anthropic**. Cost controls: image downscaling to ≤1024px JPEG, a persistent
+on-disk response cache, and an automatic model-fallback chain (429/404 → next
+model, with auto-discovery of usable models). `scripts/check_gemini.py` finds a
+working Gemini model for a given key.
+
+### Features added beyond the original plan
+
+- **Case identity**: 16-char unique `ref_no` + auto-generated human `name`.
+- **Edit & retry**: resubmit a case (add/remove docs + reason) → reruns agents.
+  Each run is audited in `case_runs` with a field-level diff (added/updated/
+  deleted) and the scorecard version produced.
+- **Exports**: case scorecard and both activity logs to **Excel & PDF**
+  (`services/export.py`), filename `*_ddmmyyyyhhmmss` (IST).
+- **Activity logs** (`activity_logs` + `api/activity.py`): user-scoped and
+  case-scoped, server-side paginated/filtered/sorted, exportable.
+- **Dashboard/table engine**: server-side pagination (10/20/30/50), per-column
+  filters, sortable headers (`components/DataTable.tsx`, `/cases` query params).
+- **Insights** (`/cases/insights`): on-time vs overdue SLA analytics per status
+  bucket — donut chart + process pivot + case list. SLA default 24h.
+- **Roles**: `uploader`, `reviewer`, **`admin` (superuser — all actions)**.
+- **Timezone**: all timestamps stored canonically in **IST** (`models.now_ist`);
+  the UI converts to a user-selected zone via an interactive **3D globe picker**
+  (live day/night terminator + blinking night-side city lights).
+- **UX**: light/dark theme with animated sun↔moon toggle, animated login skyline
+  (plane, clouds, day/night, constellation), theme-reactive office sidebar.
+- **Startup mini-migrations** in `main.py` add new columns to existing DBs and
+  backfill `ref_no`.
+
+### Schema delta vs section 3
+
+Added tables: **`case_runs`** (retry audit + field diffs), **`activity_logs`**
+(human action audit). Added `cases` columns: `ref_no`, `name`, `updated_by`.
+Timestamp defaults use `now_ist()` (IST) rather than UTC.
+
+### Sample data
+
+`sample_docs/` holds 16 categorized bank-service bundles (home loan, KYC full/
+partial, new account, credit/debit card, car/personal/business loan, locker,
+FASTag, cheque book, dormant reactivation, tax filing, NACH/SI, passbook) mixing
+typed forms, PDFs, and simulated neat/messy handwriting.
 
 ---
 
