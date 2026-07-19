@@ -3,48 +3,95 @@ import { createPortal } from "react-dom";
 import { X, Globe2, Check, Sun, Moon } from "lucide-react";
 import { useTimezone, TZ_OPTIONS } from "../store/timezone";
 
-/* Simplified continent outlines in [lon, lat] — rough but recognisable. */
+/* Continent + island outlines in [lon, lat] — detailed enough to read clearly. */
 const CONTINENTS: [number, number][][] = [
-  [[-168,65],[-158,71],[-130,70],[-95,70],[-82,62],[-64,60],[-56,50],[-66,44],[-70,41],
-   [-81,25],[-97,16],[-106,23],[-114,30],[-124,40],[-124,48],[-138,59],[-168,65]],
-  [[-79,9],[-60,10],[-50,0],[-35,-6],[-38,-16],[-48,-25],[-58,-34],[-66,-45],[-74,-52],
-   [-73,-42],[-71,-30],[-81,-6],[-79,9]],
-  [[-16,15],[-6,20],[10,32],[11,37],[25,32],[34,31],[43,12],[51,12],[41,-2],[40,-16],
-   [33,-27],[20,-35],[15,-30],[9,-3],[-8,4],[-17,6],[-16,15]],
-  [[-10,36],[-2,43],[2,51],[-5,58],[10,59],[13,65],[26,71],[55,70],[95,76],[140,73],
-   [168,66],[180,64],[160,60],[142,54],[135,44],[122,40],[121,31],[110,21],[95,8],
-   [80,8],[73,17],[60,25],[52,30],[44,40],[36,45],[28,41],[40,30],[30,31],[22,38],
-   [10,44],[-10,36]],
-  [[113,-22],[122,-16],[131,-12],[142,-11],[147,-19],[153,-28],[150,-38],[140,-38],
-   [129,-32],[118,-35],[114,-28],[113,-22]],
+  // North America
+  [[-168,66],[-165,60],[-153,58],[-138,59],[-130,55],[-124,48],[-124,40],[-120,35],
+   [-117,33],[-110,31],[-105,22],[-97,16],[-91,15],[-88,21],[-84,22],[-81,25],[-80,31],
+   [-76,35],[-70,42],[-66,44],[-60,47],[-56,51],[-64,60],[-78,62],[-85,70],[-95,70],
+   [-115,73],[-128,70],[-140,70],[-156,71],[-168,66]],
+  // Greenland
+  [[-45,60],[-30,60],[-20,70],[-22,78],[-40,83],[-58,80],[-52,70],[-45,60]],
+  // South America
+  [[-81,7],[-77,8],[-72,11],[-62,10],[-50,0],[-44,-2],[-35,-6],[-38,-13],[-41,-22],
+   [-48,-25],[-54,-34],[-58,-40],[-66,-45],[-71,-50],[-74,-52],[-72,-45],[-71,-33],
+   [-73,-20],[-78,-8],[-81,7]],
+  // Africa + Arabia
+  [[-17,15],[-16,21],[-6,28],[3,32],[10,34],[11,37],[20,33],[28,31],[33,28],[35,24],
+   [40,15],[43,12],[51,12],[45,8],[42,-1],[40,-11],[34,-20],[27,-33],[20,-35],[15,-28],
+   [12,-16],[9,-1],[3,5],[-8,4],[-14,9],[-17,15]],
+  // Europe
+  [[-10,37],[-9,43],[-1,44],[-1,49],[-5,50],[3,51],[8,54],[10,58],[16,56],[21,56],
+   [26,60],[30,60],[28,66],[22,66],[14,64],[8,60],[4,52],[-2,47],[-9,43],[-10,37]],
+  // British Isles
+  [[-6,50],[-2,51],[1,53],[-2,56],[-6,58],[-9,55],[-10,52],[-6,50]],
+  // Asia
+  [[26,40],[36,42],[45,40],[50,44],[56,41],[52,30],[57,25],[62,25],[68,24],[73,20],
+   [77,8],[80,13],[81,20],[87,22],[92,22],[97,16],[101,13],[106,10],[109,15],[108,21],
+   [113,22],[118,24],[122,30],[121,38],[126,41],[131,43],[136,45],[143,50],[136,55],
+   [141,60],[160,61],[170,66],[180,66],[172,70],[140,73],[110,74],[95,76],[68,73],
+   [55,70],[42,66],[34,62],[38,55],[30,50],[27,45],[26,40]],
+  // Japan
+  [[130,31],[136,34],[141,39],[142,43],[139,36],[135,34],[130,31]],
+  // SE Asia / Indonesia
+  [[95,6],[104,1],[112,-1],[120,-4],[127,-3],[132,-5],[122,-9],[110,-8],[100,-1],[95,6]],
+  // Madagascar
+  [[43,-12],[50,-15],[48,-25],[44,-22],[43,-12]],
+  // Australia
+  [[113,-22],[114,-28],[116,-35],[123,-34],[129,-32],[137,-35],[140,-38],[147,-38],
+   [151,-34],[153,-28],[151,-24],[146,-19],[142,-11],[136,-12],[130,-12],[124,-16],[113,-22]],
+  // New Zealand
+  [[166,-46],[171,-44],[174,-41],[176,-38],[173,-40],[168,-46],[166,-46]],
 ];
 
-const SIZE = 380, RES = 360, TILT = -0.36;
+const SIZE = 380, RES = 380, TILT = 0.40;   // +tilt → north pole toward viewer
 
-/** Build an equirectangular Earth texture once (ocean + land + polar ice). */
+/** Build a detailed equirectangular Earth texture once. */
 function buildEarthTexture(): ImageData {
-  const W = 720, H = 360;
+  const W = 1024, H = 512;
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d")!;
-  const ocean = x.createLinearGradient(0, 0, 0, H);
-  ocean.addColorStop(0, "#0a2a52"); ocean.addColorStop(0.5, "#0e3a6b"); ocean.addColorStop(1, "#0a2a52");
-  x.fillStyle = ocean; x.fillRect(0, 0, W, H);
   const px = (lon: number) => ((lon + 180) / 360) * W;
   const py = (lat: number) => ((90 - lat) / 180) * H;
-  const land = x.createLinearGradient(0, 0, 0, H);
-  land.addColorStop(0, "#5b7d52"); land.addColorStop(0.5, "#3f6b43"); land.addColorStop(1, "#4a6e40");
+
+  // ocean with latitude depth variation
+  const ocean = x.createLinearGradient(0, 0, 0, H);
+  ocean.addColorStop(0.0, "#0a2b55"); ocean.addColorStop(0.25, "#0f3f78");
+  ocean.addColorStop(0.5, "#12559b"); ocean.addColorStop(0.75, "#0f3f78");
+  ocean.addColorStop(1.0, "#0a2b55");
+  x.fillStyle = ocean; x.fillRect(0, 0, W, H);
+
+  // continents with a coastal shelf outline for depth
   for (const poly of CONTINENTS) {
     x.beginPath();
     poly.forEach(([lo, la], i) => (i ? x.lineTo(px(lo), py(la)) : x.moveTo(px(lo), py(la))));
     x.closePath();
+    x.lineWidth = 6; x.strokeStyle = "rgba(90,150,180,0.45)"; x.stroke();  // shallow shelf
+    const land = x.createLinearGradient(0, py(80), 0, py(-60));
+    land.addColorStop(0.0, "#6f8f5c");   // tundra
+    land.addColorStop(0.35, "#3f6b3f");  // temperate green
+    land.addColorStop(0.55, "#4e7a3e");
+    land.addColorStop(1.0, "#5c7a44");
     x.fillStyle = land; x.fill();
-    x.lineWidth = 2; x.strokeStyle = "rgba(120,150,110,0.5)"; x.stroke();
   }
-  // desert bands + polar ice for a touch of variety
-  x.fillStyle = "rgba(196,170,110,0.28)";
-  x.fillRect(px(-15), py(30), px(55) - px(-15), py(15) - py(30));
-  x.fillStyle = "rgba(235,245,255,0.85)";
-  x.fillRect(0, 0, W, py(75)); x.fillRect(0, py(-72), W, H - py(-72));
+
+  // arid / desert bands (Sahara, Arabia, Australia interior, US SW)
+  x.fillStyle = "rgba(202,176,116,0.42)";
+  const desert = (lo1: number, la1: number, lo2: number, la2: number) =>
+    x.fillRect(px(lo1), py(la1), px(lo2) - px(lo1), py(la2) - py(la1));
+  desert(-12, 30, 35, 16); desert(38, 30, 55, 15);
+  desert(118, -20, 140, -28); desert(-114, 38, -104, 32);
+  // mountain/forest darkening (Himalaya, Amazon, Congo)
+  x.fillStyle = "rgba(30,60,35,0.35)";
+  desert(-70, -3, -52, -12); desert(12, 4, 28, -6); desert(75, 34, 95, 28);
+  // polar ice caps (soft edge)
+  const ice = x.createLinearGradient(0, 0, 0, py(60));
+  ice.addColorStop(0, "rgba(240,248,255,0.95)"); ice.addColorStop(1, "rgba(240,248,255,0)");
+  x.fillStyle = ice; x.fillRect(0, 0, W, py(60));
+  const ice2 = x.createLinearGradient(0, py(-60), 0, H);
+  ice2.addColorStop(0, "rgba(240,248,255,0)"); ice2.addColorStop(1, "rgba(240,248,255,0.95)");
+  x.fillStyle = ice2; x.fillRect(0, py(-60), W, H - py(-60));
+
   return x.getImageData(0, 0, W, H);
 }
 
@@ -95,12 +142,13 @@ export default function GlobePicker({ onClose }: { onClose: () => void }) {
         const r2 = nx * nx + ny * ny;
         if (r2 > 1) continue;
         const nz = Math.sqrt(1 - r2);
-        // un-tilt (rotate +TILT back around X) to geographic sphere coords
-        const y = ny * Math.cos(-TILT) - nz * Math.sin(-TILT);
-        const z = ny * Math.sin(-TILT) + nz * Math.cos(-TILT);
+        const my = -ny;                        // screen-down → math-up
         const x = nx;
+        // un-tilt (rotate -TILT around X) into globe-axis coords
+        const y = my * Math.cos(TILT) + nz * Math.sin(TILT);
+        const z = -my * Math.sin(TILT) + nz * Math.cos(TILT);
         const lat = Math.asin(Math.max(-1, Math.min(1, y)));
-        const app = Math.atan2(x, z);         // apparent longitude at rot=0
+        const app = Math.atan2(x, z);         // axis longitude at rot=0
         const di = (py2 * RES + px2) * 4;
         idx.push(di);
         u0.push(((app / (2 * Math.PI)) + 0.5) * TW);
@@ -166,6 +214,29 @@ export default function GlobePicker({ onClose }: { onClose: () => void }) {
       ag.addColorStop(0, "rgba(96,165,250,0)"); ag.addColorStop(1, "rgba(96,165,250,0.35)");
       ctx.beginPath(); ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
       ctx.fillStyle = ag; ctx.fill();
+
+      // coordinate graticule (lat/long grid) so coordinates are readable
+      const gline = (pts: { sx: number; sy: number; z: number }[]) => {
+        ctx.beginPath(); let started = false;
+        for (const p of pts) {
+          if (p.z >= 0) { started ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy); started = true; }
+          else started = false;
+        }
+        ctx.strokeStyle = "rgba(190,220,255,0.16)"; ctx.lineWidth = 1; ctx.stroke();
+      };
+      for (let latD = -60; latD <= 60; latD += 30) {
+        const pts = []; for (let l = -180; l <= 180; l += 5) pts.push(project(latD, l, rotV)); gline(pts);
+      }
+      for (let lonD = -180; lonD < 180; lonD += 30) {
+        const pts = []; for (let l = -85; l <= 85; l += 5) pts.push(project(l, lonD, rotV)); gline(pts);
+      }
+      // equator emphasised
+      {
+        const pts = []; for (let l = -180; l <= 180; l += 4) pts.push(project(0, l, rotV));
+        ctx.beginPath(); let s = false;
+        for (const p of pts) { if (p.z >= 0) { s ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy); s = true; } else s = false; }
+        ctx.strokeStyle = "rgba(190,220,255,0.32)"; ctx.lineWidth = 1.2; ctx.stroke();
+      }
 
       // city markers
       TZ_OPTIONS.forEach((o, i) => {
