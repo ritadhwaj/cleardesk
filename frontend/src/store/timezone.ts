@@ -3,20 +3,22 @@ import { create } from "zustand";
 /** Display timezone. Backend stores everything in IST; the UI converts to
  *  whichever zone the user picks here. Persisted across sessions. */
 
-export interface TzOption { id: string; label: string }
+export interface TzOption {
+  id: string; label: string; city: string; lat: number; lon: number;
+}
 
 export const TZ_OPTIONS: TzOption[] = [
-  { id: "Asia/Kolkata", label: "India (IST)" },
-  { id: "UTC", label: "UTC" },
-  { id: "America/New_York", label: "New York (ET)" },
-  { id: "America/Chicago", label: "Chicago (CT)" },
-  { id: "America/Los_Angeles", label: "Los Angeles (PT)" },
-  { id: "Europe/London", label: "London (GMT/BST)" },
-  { id: "Europe/Paris", label: "Paris (CET)" },
-  { id: "Asia/Dubai", label: "Dubai (GST)" },
-  { id: "Asia/Singapore", label: "Singapore (SGT)" },
-  { id: "Asia/Tokyo", label: "Tokyo (JST)" },
-  { id: "Australia/Sydney", label: "Sydney (AET)" },
+  { id: "Asia/Kolkata",        label: "India (IST)",     city: "New Delhi",   lat: 28.6,  lon: 77.2 },
+  { id: "UTC",                 label: "UTC",             city: "UTC",         lat: 0,     lon: 0 },
+  { id: "America/New_York",    label: "Eastern (ET)",    city: "New York",    lat: 40.7,  lon: -74.0 },
+  { id: "America/Chicago",     label: "Central (CT)",    city: "Chicago",     lat: 41.9,  lon: -87.6 },
+  { id: "America/Los_Angeles", label: "Pacific (PT)",    city: "Los Angeles", lat: 34.0,  lon: -118.2 },
+  { id: "Europe/London",       label: "UK (GMT/BST)",    city: "London",      lat: 51.5,  lon: -0.1 },
+  { id: "Europe/Paris",        label: "Central Europe",  city: "Paris",       lat: 48.9,  lon: 2.35 },
+  { id: "Asia/Dubai",          label: "Gulf (GST)",      city: "Dubai",       lat: 25.2,  lon: 55.3 },
+  { id: "Asia/Singapore",      label: "Singapore (SGT)", city: "Singapore",   lat: 1.35,  lon: 103.8 },
+  { id: "Asia/Tokyo",          label: "Japan (JST)",     city: "Tokyo",       lat: 35.7,  lon: 139.7 },
+  { id: "Australia/Sydney",    label: "Australia (AET)", city: "Sydney",      lat: -33.9, lon: 151.2 },
 ];
 
 const stored = typeof localStorage !== "undefined"
@@ -33,5 +35,6 @@ export const useTimezone = create<TzState>((set) => ({
   },
 }));
 
-export const labelFor = (id: string) =>
-  TZ_OPTIONS.find((o) => o.id === id)?.label ?? id;
+export const optionFor = (id: string) =>
+  TZ_OPTIONS.find((o) => o.id === id) ?? TZ_OPTIONS[0];
+export const labelFor = (id: string) => optionFor(id).label;
