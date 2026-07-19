@@ -18,7 +18,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      <OfficeScene />
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80
                          border-b border-slate-200/70 dark:border-slate-800/70
                          transition-colors duration-500">
@@ -71,9 +70,20 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="flex-1 animate-fade-in relative z-10">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex relative">
+        {/* office scene sidebar: quarter of the screen, sticky while content scrolls */}
+        <aside className="hidden xl:block w-1/4 max-w-[380px] relative shrink-0
+                          border-r border-slate-200/70 dark:border-slate-800/70
+                          transition-colors duration-700">
+          <div className="sticky top-16 h-[calc(100vh-4rem)]">
+            <OfficeScene />
+          </div>
+        </aside>
+
+        <main className="flex-1 min-w-0 animate-fade-in relative z-10">
+          <Outlet />
+        </main>
+      </div>
 
       <footer className="relative z-10 border-t border-slate-200/70 dark:border-slate-800/70 py-4 transition-colors duration-500">
         <p className="text-center text-xs text-slate-400 dark:text-slate-500">

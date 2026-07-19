@@ -1,126 +1,224 @@
 import { useTheme } from "../store/theme";
 
-/** Ambient office room behind the whole app.
- *  Light: white walls & desk, a window-shaped sunbeam falls across the room.
- *  Dark: matte black room — the sunbeam dies and three pendant lamps switch on
- *  (staggered), pouring warm light cones onto the desk. All CSS-transitioned. */
+/** Office-room scene for the left sidebar panel (portrait).
+ *  Light: white room, sun + drifting clouds in the window, a strong sunbeam
+ *  and a glare pool across the desk. Dark: matte black room, moon + stars +
+ *  night clouds in the window, pendant lamps switch on in sequence.
+ *  Perf: gradient glows only (no SVG filters), transform/opacity/fill
+ *  transitions with will-change. */
+
+const EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
 
 const LAMPS = [
-  { x: 470, drop: 175, delay: 200 },
-  { x: 620, drop: 215, delay: 380 },
-  { x: 770, drop: 185, delay: 560 },
+  { x: 110, drop: 150, delay: 200 },
+  { x: 235, drop: 195, delay: 400 },
+  { x: 360, drop: 160, delay: 600 },
 ];
 
 export default function OfficeScene() {
   const { dark } = useTheme();
-  const t = (ms: number, delay = 0) =>
-    ({ transition: `all ${ms}ms cubic-bezier(0.45,0,0.25,1) ${delay}ms` });
+  const fade = (on: boolean, ms = 1300, delay = 0) => ({
+    opacity: on ? 1 : 0,
+    transition: `opacity ${ms}ms ${EASE} ${delay}ms`,
+  });
+  const fill = (light: string, night: string, ms = 1300) => ({
+    fill: dark ? night : light,
+    transition: `fill ${ms}ms ${EASE}`,
+  });
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none select-none opacity-[0.55]">
-      <svg viewBox="0 0 1440 900" className="w-full h-full" preserveAspectRatio="xMidYMax slice">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+      <svg viewBox="0 0 480 960" className="w-full h-full" preserveAspectRatio="xMidYMax slice">
         <defs>
-          <linearGradient id="beam" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#fef9c3" stopOpacity="0.15" />
+          <linearGradient id="wallDay" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#e8edf4" />
           </linearGradient>
-          <linearGradient id="cone" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#fde68a" stopOpacity="0.85" />
+          <linearGradient id="wallNight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0c1018" /><stop offset="100%" stopColor="#05070c" />
+          </linearGradient>
+          <linearGradient id="floorDay" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#dbe3ec" /><stop offset="100%" stopColor="#c4cfdc" />
+          </linearGradient>
+          <linearGradient id="floorNight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0b0f18" /><stop offset="100%" stopColor="#070a10" />
+          </linearGradient>
+          <linearGradient id="winDay" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#60a5fa" /><stop offset="100%" stopColor="#dbeafe" />
+          </linearGradient>
+          <linearGradient id="winNight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0b1026" /><stop offset="100%" stopColor="#1e1b4b" />
+          </linearGradient>
+          <radialGradient id="sunG">
+            <stop offset="0%" stopColor="#fff8d6" /><stop offset="40%" stopColor="#fcd34d" />
+            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="moonG">
+            <stop offset="0%" stopColor="#ffffff" /><stop offset="45%" stopColor="#e2e8f0" />
+            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="beamG" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#fde68a" stopOpacity="0.06" />
+          </linearGradient>
+          <radialGradient id="glareG">
+            <stop offset="0%" stopColor="#fffbeb" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#fde68a" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="coneG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fde68a" stopOpacity="0.9" />
             <stop offset="100%" stopColor="#fde68a" stopOpacity="0.02" />
           </linearGradient>
-          <filter id="soft"><feGaussianBlur stdDeviation="5" /></filter>
+          <linearGradient id="deskTopDay" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#e2e8f0" />
+          </linearGradient>
+          <linearGradient id="deskTopNight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#232b38" /><stop offset="100%" stopColor="#141a24" />
+          </linearGradient>
+          <clipPath id="winClip"><rect x="256" y="150" width="188" height="270" rx="8" /></clipPath>
         </defs>
 
         {/* wall + floor */}
-        <rect width="1440" height="740" style={{ ...t(1200), fill: dark ? "#05070d" : "#f8fafc" }} />
-        <rect y="740" width="1440" height="160" style={{ ...t(1200), fill: dark ? "#0a0f1a" : "#e2e8f0" }} />
-        <line x1="0" y1="740" x2="1440" y2="740"
-              style={{ ...t(1200), stroke: dark ? "#1e293b" : "#cbd5e1" }} strokeWidth="2" />
+        <rect width="480" height="770" fill="url(#wallDay)" style={fade(!dark)} />
+        <rect width="480" height="770" fill="url(#wallNight)" style={fade(dark)} />
+        <rect y="770" width="480" height="190" fill="url(#floorDay)" style={fade(!dark)} />
+        <rect y="770" width="480" height="190" fill="url(#floorNight)" style={fade(dark)} />
+        <line x1="0" y1="770" x2="480" y2="770" strokeWidth="2"
+              style={{ transition: `stroke 1300ms ${EASE}`, stroke: dark ? "#1e293b" : "#b6c2d1" }} />
+        {/* skirting for depth */}
+        <rect y="756" width="480" height="14"
+              style={fill("#eef2f7", "#0e1420")} />
 
-        {/* window on the right of the room */}
+        {/* ---- window (right) with sky inside ---- */}
         <g>
-          <rect x="1060" y="150" width="300" height="400" rx="6"
-                style={{ ...t(1200), fill: dark ? "#0b1026" : "#bae6fd",
-                         stroke: dark ? "#334155" : "#94a3b8" }} strokeWidth="10" />
-          <line x1="1210" y1="155" x2="1210" y2="545"
-                style={{ ...t(1200), stroke: dark ? "#334155" : "#94a3b8" }} strokeWidth="8" />
-          <line x1="1065" y1="350" x2="1355" y2="350"
-                style={{ ...t(1200), stroke: dark ? "#334155" : "#94a3b8" }} strokeWidth="8" />
-          {/* sun / moon seen through the glass */}
-          <circle cx="1140" cy="240" r="30" fill="#fcd34d" filter="url(#soft)"
-                  style={{ ...t(1400), opacity: dark ? 0 : 0.9 }} />
-          <circle cx="1290" cy="230" r="22" fill="#f1f5f9" filter="url(#soft)"
-                  style={{ ...t(1400, 300), opacity: dark ? 0.95 : 0 }} />
-          {[...Array(8)].map((_, i) => (
-            <circle key={i} cx={1080 + (i * 37) % 260 + 8} cy={175 + (i * 53) % 150}
-                    r={i % 3 ? 1.2 : 1.8} fill="white"
-                    className={dark ? "animate-twinkle" : ""}
-                    style={{ ...t(900, 500), opacity: dark ? 0.9 : 0,
-                             animationDelay: `${(i % 4) * 0.4}s` }} />
-          ))}
+          {/* window shadow for 3d pop */}
+          <rect x="262" y="158" width="188" height="270" rx="8"
+                style={fill("#b6c2d1", "#000000")} opacity="0.35" />
+          <rect x="256" y="150" width="188" height="270" rx="8"
+                style={{ transition: `stroke 1300ms ${EASE}`,
+                         stroke: dark ? "#334155" : "#94a3b8", fill: "none" }} strokeWidth="10" />
+          <g clipPath="url(#winClip)">
+            <rect x="256" y="150" width="188" height="270" fill="url(#winDay)" style={fade(!dark)} />
+            <rect x="256" y="150" width="188" height="270" fill="url(#winNight)" style={fade(dark)} />
+            {/* sun in the window */}
+            <g style={{ transform: dark ? "translate(30px, 260px)" : "translate(0,0)",
+                        transition: `transform 1600ms ${EASE}`, willChange: "transform" }}>
+              <circle cx="310" cy="230" r="55" fill="url(#sunG)" />
+              <circle cx="310" cy="230" r="20" fill="#fde047" />
+            </g>
+            {/* moon in the window */}
+            <g style={{ transform: dark ? "translate(0,0)" : "translate(-24px, 270px)",
+                        transition: `transform 1600ms ${EASE} 250ms`, willChange: "transform" }}>
+              <circle cx="392" cy="215" r="42" fill="url(#moonG)" />
+              <circle cx="392" cy="215" r="16" fill="#f8fafc" />
+              <circle cx="387" cy="210" r="3.5" fill="#cbd5e1" opacity="0.7" />
+              <circle cx="397" cy="220" r="2.2" fill="#cbd5e1" opacity="0.6" />
+            </g>
+            {/* stars */}
+            {[...Array(12)].map((_, i) => (
+              <circle key={i} cx={266 + (i * 53) % 170 + 4} cy={165 + (i * 71) % 200}
+                      r={i % 3 ? 1.2 : 1.8} fill="white"
+                      className={dark ? "animate-twinkle" : ""}
+                      style={{ ...fade(dark, 900, 600), animationDelay: `${(i % 4) * 0.4}s` }} />
+            ))}
+            {/* window clouds: white by day, slate by night, always drifting */}
+            <g className="animate-drift">
+              <g transform="translate(300 300) scale(0.55)">
+                <g style={{ transition: `fill 1300ms ${EASE}, opacity 1300ms ${EASE}` }}
+                   fill={dark ? "#26314b" : "#ffffff"} opacity={dark ? 0.6 : 0.95}>
+                  <ellipse cx="0" cy="0" rx="46" ry="16" /><ellipse cx="-28" cy="6" rx="28" ry="12" />
+                  <ellipse cx="28" cy="5" rx="30" ry="13" /><ellipse cx="4" cy="-11" rx="24" ry="13" />
+                </g>
+              </g>
+            </g>
+            <g className="animate-drift-2">
+              <g transform="translate(390 185) scale(0.4)">
+                <g style={{ transition: `fill 1300ms ${EASE}, opacity 1300ms ${EASE}` }}
+                   fill={dark ? "#1f2940" : "#ffffff"} opacity={dark ? 0.5 : 0.9}>
+                  <ellipse cx="0" cy="0" rx="46" ry="16" /><ellipse cx="-26" cy="6" rx="26" ry="12" />
+                  <ellipse cx="26" cy="5" rx="28" ry="12" />
+                </g>
+              </g>
+            </g>
+          </g>
+          {/* mullions */}
+          <line x1="350" y1="155" x2="350" y2="415" strokeWidth="7"
+                style={{ transition: `stroke 1300ms ${EASE}`, stroke: dark ? "#334155" : "#94a3b8" }} />
+          <line x1="260" y1="285" x2="440" y2="285" strokeWidth="7"
+                style={{ transition: `stroke 1300ms ${EASE}`, stroke: dark ? "#334155" : "#94a3b8" }} />
         </g>
 
-        {/* window-shaped sunbeam projected across the room (dies at night) */}
-        <polygon points="1060,220 1060,540 420,830 180,700"
-                 fill="url(#beam)" filter="url(#soft)"
-                 style={{ ...t(1500), opacity: dark ? 0 : 0.7 }} />
+        {/* ---- sunbeam + glare pool (day only) ---- */}
+        <polygon points="256,190 256,420 40,900 0,760 0,560" fill="url(#beamG)"
+                 style={fade(!dark, 1500)} />
+        <ellipse cx="180" cy="705" rx="150" ry="34" fill="url(#glareG)"
+                 style={fade(!dark, 1500, 150)} />
+        <ellipse cx="120" cy="850" rx="180" ry="46" fill="url(#glareG)"
+                 style={{ ...fade(!dark, 1500, 250), opacity: dark ? 0 : 0.8 }} />
 
-        {/* pendant lamps */}
+        {/* ---- pendant lamps ---- */}
         {LAMPS.map((l, i) => (
           <g key={i}>
-            <line x1={l.x} y1="0" x2={l.x} y2={l.drop}
-                  style={{ ...t(1200), stroke: dark ? "#475569" : "#94a3b8" }} strokeWidth="3" />
-            <path d={`M ${l.x - 34} ${l.drop + 34} L ${l.x - 10} ${l.drop} L ${l.x + 10} ${l.drop} L ${l.x + 34} ${l.drop + 34} Z`}
-                  style={{ ...t(1200), fill: dark ? "#1f2937" : "#cbd5e1",
-                           stroke: dark ? "#374151" : "#94a3b8" }} strokeWidth="2" />
-            {/* bulb + glow + cone: only at night, staggered switch-on */}
-            <circle cx={l.x} cy={l.drop + 26} r="9"
-                    style={{ ...t(500, l.delay + 700), fill: dark ? "#fde68a" : "#e2e8f0" }} />
-            <circle cx={l.x} cy={l.drop + 26} r="20" fill="#fde68a" filter="url(#soft)"
-                    style={{ ...t(500, l.delay + 700), opacity: dark ? 0.7 : 0 }} />
-            <polygon points={`${l.x - 30},${l.drop + 36} ${l.x + 30},${l.drop + 36} ${l.x + 130},640 ${l.x - 130},640`}
-                     fill="url(#cone)"
-                     style={{ ...t(700, l.delay + 800), opacity: dark ? 0.5 : 0 }} />
+            <line x1={l.x} y1="0" x2={l.x} y2={l.drop} strokeWidth="3"
+                  style={{ transition: `stroke 1300ms ${EASE}`, stroke: dark ? "#475569" : "#9db0c4" }} />
+            <path d={`M ${l.x - 30} ${l.drop + 30} L ${l.x - 9} ${l.drop} L ${l.x + 9} ${l.drop} L ${l.x + 30} ${l.drop + 30} Z`}
+                  strokeWidth="2"
+                  style={{ transition: `fill 1300ms ${EASE}, stroke 1300ms ${EASE}`,
+                           fill: dark ? "#1f2937" : "#cdd8e4", stroke: dark ? "#374151" : "#9db0c4" }} />
+            <ellipse cx={l.x} cy={l.drop + 30} rx="30" ry="5"
+                     style={fill("#b6c2d1", "#111827")} />
+            {/* bulb, glow, cone: night only, staggered */}
+            <circle cx={l.x} cy={l.drop + 24} r="8"
+                    style={{ transition: `fill 450ms ${EASE} ${l.delay + 700}ms`,
+                             fill: dark ? "#fde68a" : "#e2e8f0" }} />
+            <circle cx={l.x} cy={l.drop + 24} r="34" fill="url(#sunG)"
+                    style={fade(dark, 500, l.delay + 700)} />
+            <polygon points={`${l.x - 26},${l.drop + 34} ${l.x + 26},${l.drop + 34} ${l.x + 105},700 ${l.x - 105},700`}
+                     fill="url(#coneG)" style={{ ...fade(dark, 700, l.delay + 800), opacity: dark ? 0.45 : 0 }} />
+            <ellipse cx={l.x} cy="700" rx="95" ry="16" fill="url(#glareG)"
+                     style={fade(dark, 700, l.delay + 900)} />
           </g>
         ))}
 
-        {/* desk */}
+        {/* ---- desk (2.5-D) ---- */}
         <g>
-          <rect x="360" y="628" width="520" height="16" rx="5"
-                style={{ ...t(1200), fill: dark ? "#111827" : "#ffffff",
-                         stroke: dark ? "#374151" : "#cbd5e1" }} strokeWidth="2" />
-          <rect x="386" y="644" width="14" height="120"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0" }} />
-          <rect x="842" y="644" width="14" height="120"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0" }} />
+          {/* shadow */}
+          <ellipse cx="235" cy="800" rx="200" ry="22"
+                   style={{ transition: `fill 1300ms ${EASE}, opacity 1300ms ${EASE}`,
+                            fill: "#000000", opacity: dark ? 0.5 : 0.12 }} />
+          {/* top surface with slight perspective */}
+          <polygon points="70,676 400,676 424,700 46,700" fill="url(#deskTopDay)" style={fade(!dark)} />
+          <polygon points="70,676 400,676 424,700 46,700" fill="url(#deskTopNight)" style={fade(dark)} />
+          {/* front edge */}
+          <rect x="46" y="700" width="378" height="14" rx="3"
+                style={fill("#cbd5e1", "#0d131d")} />
+          {/* legs */}
+          <rect x="70" y="714" width="12" height="86" style={fill("#b6c2d1", "#151b26")} />
+          <rect x="390" y="714" width="12" height="86" style={fill("#b6c2d1", "#151b26")} />
           {/* monitor */}
-          <rect x="560" y="540" width="130" height="80" rx="6"
-                style={{ ...t(1200), fill: dark ? "#0f172a" : "#f1f5f9",
-                         stroke: dark ? "#475569" : "#94a3b8" }} strokeWidth="4" />
-          <rect x="614" y="620" width="22" height="10"
-                style={{ ...t(1200), fill: dark ? "#374151" : "#cbd5e1" }} />
-          {/* screen glow at night */}
-          <rect x="566" y="546" width="118" height="68" rx="4" fill="#38bdf8" filter="url(#soft)"
-                style={{ ...t(900, 1200), opacity: dark ? 0.25 : 0 }} />
-          {/* plant */}
-          <rect x="800" y="600" width="26" height="28" rx="4"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0" }} />
-          <path d="M 813 600 C 800 575 800 565 812 552 C 824 565 826 578 813 600 Z"
-                style={{ ...t(1200), fill: dark ? "#14532d" : "#4ade80" }} />
+          <rect x="170" y="592" width="120" height="74" rx="6" strokeWidth="4"
+                style={{ transition: `fill 1300ms ${EASE}, stroke 1300ms ${EASE}`,
+                         fill: dark ? "#0f172a" : "#f1f5f9", stroke: dark ? "#475569" : "#9db0c4" }} />
+          <rect x="176" y="598" width="108" height="62" rx="4" fill="#38bdf8"
+                style={{ ...fade(dark, 900, 1300), opacity: dark ? 0.3 : 0 }} />
+          <rect x="220" y="666" width="20" height="9" style={fill("#9db0c4", "#374151")} />
+          {/* mug + plant */}
+          <rect x="320" y="654" width="18" height="20" rx="3" style={fill("#e2e8f0", "#1f2937")} />
+          <rect x="120" y="640" width="24" height="26" rx="4" style={fill("#dbe3ec", "#1f2937")} />
+          <path d="M 132 640 C 120 616 121 606 132 594 C 143 606 145 618 132 640 Z"
+                style={fill("#4ade80", "#14532d")} />
         </g>
 
-        {/* chair facing the desk */}
+        {/* ---- chair facing the desk ---- */}
         <g>
-          <rect x="585" y="668" width="80" height="14" rx="7"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0",
-                         stroke: dark ? "#374151" : "#cbd5e1" }} strokeWidth="2" />
-          <rect x="616" y="682" width="16" height="60"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0" }} />
-          <rect x="580" y="742" width="90" height="10" rx="5"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0" }} />
-          <rect x="577" y="600" width="18" height="80" rx="8"
-                style={{ ...t(1200), fill: dark ? "#1f2937" : "#e2e8f0",
-                         stroke: dark ? "#374151" : "#cbd5e1" }} strokeWidth="2" />
+          <ellipse cx="235" cy="905" rx="90" ry="14"
+                   style={{ transition: `opacity 1300ms ${EASE}`, fill: "#000",
+                            opacity: dark ? 0.45 : 0.1 }} />
+          <rect x="196" y="716" width="78" height="16" rx="8" style={fill("#dbe3ec", "#1a2230")} />
+          <rect x="227" y="732" width="16" height="66" style={fill("#c4cfdc", "#151b26")} />
+          <rect x="190" y="796" width="90" height="10" rx="5" style={fill("#c4cfdc", "#151b26")} />
+          <rect x="188" y="640" width="18" height="86" rx="8" strokeWidth="2"
+                style={{ transition: `fill 1300ms ${EASE}, stroke 1300ms ${EASE}`,
+                         fill: dark ? "#1a2230" : "#dbe3ec", stroke: dark ? "#2b3546" : "#b6c2d1" }} />
         </g>
       </svg>
     </div>

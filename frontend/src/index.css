@@ -33,6 +33,14 @@ code, pre, .font-mono {
 }
 .animate-twinkle { animation: twinkle 1.8s ease-in-out infinite; }
 
+/* slow cloud drift for the theme scenes */
+@keyframes drift {
+  from { transform: translateX(-14px); }
+  to   { transform: translateX(14px); }
+}
+.animate-drift   { animation: drift 14s ease-in-out infinite alternate; }
+.animate-drift-2 { animation: drift 19s ease-in-out infinite alternate-reverse; }
+
 /* entrance animations */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(10px); }
