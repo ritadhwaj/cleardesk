@@ -113,13 +113,17 @@ export default function OfficeScene() {
               <circle cx="387" cy="210" r="3.5" fill="#cbd5e1" opacity="0.7" />
               <circle cx="397" cy="220" r="2.2" fill="#cbd5e1" opacity="0.6" />
             </g>
-            {/* stars */}
-            {[...Array(12)].map((_, i) => (
-              <circle key={i} cx={266 + (i * 53) % 170 + 4} cy={165 + (i * 71) % 200}
-                      r={i % 3 ? 1.2 : 1.8} fill="white"
-                      className={dark ? "animate-twinkle" : ""}
-                      style={{ ...fade(dark, 900, 600), animationDelay: `${(i % 4) * 0.4}s` }} />
-            ))}
+            {/* stars — twinkle in place behind the moon, random rhythms */}
+            {dark && [...Array(16)].map((_, i) => {
+              const rnd = (n: number) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
+              return (
+                <circle key={i} cx={264 + rnd(1) * 174} cy={162 + rnd(2) * 210}
+                        r={rnd(3) > 0.8 ? 1.8 : 1.1} fill="white"
+                        className="animate-star"
+                        style={{ animationDelay: `${(rnd(4) * 4).toFixed(2)}s`,
+                                 animationDuration: `${(2.2 + rnd(5) * 2.6).toFixed(2)}s` }} />
+              );
+            })}
             {/* window clouds: white by day, slate by night, always drifting */}
             <g className="animate-drift">
               <g transform="translate(300 300) scale(0.55)">

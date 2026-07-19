@@ -26,12 +26,19 @@ code, pre, .font-mono {
 ::-webkit-scrollbar-thumb { @apply bg-slate-300 dark:bg-slate-700 rounded-full; }
 ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400 dark:bg-slate-600; }
 
-/* star twinkle for the theme toggle */
+/* star twinkle for the theme toggle (scales — used on the toggle knob only) */
 @keyframes twinkle {
   0%, 100% { opacity: 0.9; transform: scale(1); }
   50% { opacity: 0.3; transform: scale(0.6); }
 }
 .animate-twinkle { animation: twinkle 1.8s ease-in-out infinite; }
+
+/* background stars — twinkle in place (opacity only, never moves) */
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 0.12; }
+}
+.animate-star { animation: starTwinkle 3s ease-in-out infinite; will-change: opacity; }
 
 /* slow cloud drift for the theme scenes */
 @keyframes drift {

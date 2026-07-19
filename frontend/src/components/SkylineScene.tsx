@@ -13,10 +13,16 @@ const BUILDINGS = [
   { x: 384, w: 132, h: 450 }, { x: 536, w: 88, h: 260 }, { x: 644, w: 118, h: 360 },
 ];
 
-const STARS = Array.from({ length: 26 }, (_, i) => ({
-  cx: (i * 137 + 31) % 780 + 10, cy: (i * 47 + 13) % 250 + 12,
-  r: i % 3 === 0 ? 2 : 1.2, delay: `${(i % 5) * 0.35}s`,
-}));
+// pseudo-random but stable star field; each twinkles on its own rhythm
+const STARS = Array.from({ length: 34 }, (_, i) => {
+  const rnd = (n: number) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
+  return {
+    cx: rnd(1) * 780 + 10, cy: rnd(2) * 250 + 12,
+    r: rnd(3) > 0.8 ? 2 : 1.2,
+    delay: `${(rnd(4) * 4).toFixed(2)}s`,
+    dur: `${(2.2 + rnd(5) * 2.6).toFixed(2)}s`,
+  };
+});
 
 const CLOUDS = [
   { x: 90, y: 90, s: 1.15, cls: "animate-drift" },
@@ -82,11 +88,11 @@ export default function SkylineScene() {
         <rect width="800" height="680" fill="url(#daySky)" style={fade(!dark)} />
         <rect width="800" height="680" fill="url(#nightSky)" style={fade(dark)} />
 
-        {/* stars */}
-        {STARS.map((s, i) => (
+        {/* stars — twinkle in place behind the moon, random rhythms */}
+        {dark && STARS.map((s, i) => (
           <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="white"
-                  className={dark ? "animate-twinkle" : ""}
-                  style={{ ...fade(dark, 900, 700), animationDelay: s.delay }} />
+                  className="animate-star"
+                  style={{ animationDelay: s.delay, animationDuration: s.dur }} />
         ))}
 
         {/* sun: sets behind towers */}
@@ -115,33 +121,51 @@ export default function SkylineScene() {
           </g>
         ))}
 
-        {/* airplane — flies across the sky through the clouds, both themes */}
+        {/* airliner — side profile, flies across the sky, both themes */}
         <g className="animate-fly">
-          <g transform="scale(0.9)">
-            {/* faint contrail */}
-            <rect x="-140" y="106" width="130" height="3" rx="1.5" fill="#ffffff"
-                  opacity={dark ? 0.18 : 0.55} />
-            <g style={{ transition: `fill 1400ms ${EASE}` }}
-               fill={dark ? "#cbd5e1" : "#e2e8f0"}>
+          <g transform="scale(1.05)">
+            {/* twin contrails behind the engines */}
+            <rect x="-150" y="99.5" width="150" height="2.4" rx="1.2" fill="#ffffff"
+                  opacity={dark ? 0.12 : 0.4} />
+            <rect x="-150" y="106" width="150" height="2.4" rx="1.2" fill="#ffffff"
+                  opacity={dark ? 0.12 : 0.4} />
+
+            <g style={{ transition: `fill 1400ms ${EASE}` }}>
+              {/* far wing (behind fuselage, darker for depth) */}
+              <path d="M 30 101 L 8 122 L 20 122 L 44 103 Z"
+                    fill={dark ? "#64748b" : "#94a3b8" } />
+              {/* horizontal stabilizer */}
+              <path d="M -8 101 L -20 92 L -13 92 L 2 100 Z"
+                    fill={dark ? "#94a3b8" : "#cbd5e1"} />
               {/* fuselage */}
-              <path d="M -6 100 L 44 96 Q 58 96 58 102 Q 58 108 44 108 L -6 106 Q -14 103 -6 100 Z" />
-              {/* nose */}
-              <ellipse cx="55" cy="102" rx="7" ry="5" fill={dark ? "#e5edf6" : "#f1f5f9"} />
+              <path d="M -14 100 L 40 96.5 Q 60 96.5 66 101.5 Q 60 106.5 40 106.5 L -14 103.5
+                       Q -20 101.75 -14 100 Z"
+                    fill={dark ? "#e2e8f0" : "#f8fafc"} />
+              {/* cockpit nose shading */}
+              <path d="M 52 97.6 Q 66 99 66 101.5 Q 66 104 52 105.4 Z"
+                    fill={dark ? "#cbd5e1" : "#e2e8f0"} />
               {/* tail fin */}
-              <path d="M -4 100 L -16 84 L -8 84 L 6 99 Z" />
-              {/* main wing (top) */}
-              <path d="M 20 100 L 44 78 L 52 80 L 34 101 Z" fill={dark ? "#94a3b8" : "#cbd5e1"} />
-              {/* main wing (bottom) */}
-              <path d="M 20 106 L 44 128 L 52 126 L 34 105 Z" fill={dark ? "#94a3b8" : "#cbd5e1"} />
+              <path d="M -14 100.5 L -24 82 L -14 82 L -2 99.5 Z"
+                    fill={dark ? "#cbd5e1" : "#e5edf6"} />
+              {/* belly shadow */}
+              <path d="M -12 103.5 L 40 106 Q 58 106 64 102.6 Q 58 108.5 40 108.5 L -12 105 Z"
+                    fill={dark ? "#94a3b8" : "#cbd5e1"} opacity="0.8" />
+              {/* near wing (in front, lighter) */}
+              <path d="M 26 105 L 0 84 L 14 84 L 42 103.5 Z"
+                    fill={dark ? "#cbd5e1" : "#e2e8f0"} />
+              {/* engine nacelle under the wing */}
+              <ellipse cx="24" cy="107" rx="7" ry="3" fill={dark ? "#64748b" : "#94a3b8"} />
             </g>
+
+            {/* cockpit window */}
+            <path d="M 56 99.5 L 61 100 L 61 102 L 56 102.5 Z"
+                  fill={dark ? "#38bdf8" : "#0ea5e9"} opacity="0.85" />
             {/* cabin windows */}
-            {[10, 18, 26, 34].map((wx) => (
-              <circle key={wx} cx={wx} cy="103" r="1.4"
-                      fill={dark ? "#fde68a" : "#38bdf8"}
-                      opacity={dark ? 0.95 : 0.85} />
+            {[6, 14, 22, 30, 38, 46].map((wx) => (
+              <rect key={wx} x={wx} y="100" width="2.4" height="2.2" rx="0.6"
+                    fill={dark ? "#fde68a" : "#7dd3fc"}
+                    opacity={dark ? 0.95 : 0.8} />
             ))}
-            {/* blinking nav light */}
-            <circle cx="58" cy="102" r="1.8" fill="#ef4444" className="animate-twinkle" />
           </g>
         </g>
 
