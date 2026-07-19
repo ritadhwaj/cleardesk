@@ -115,6 +115,36 @@ export default function SkylineScene() {
           </g>
         ))}
 
+        {/* airplane — flies across the sky through the clouds, both themes */}
+        <g className="animate-fly">
+          <g transform="scale(0.9)">
+            {/* faint contrail */}
+            <rect x="-140" y="106" width="130" height="3" rx="1.5" fill="#ffffff"
+                  opacity={dark ? 0.18 : 0.55} />
+            <g style={{ transition: `fill 1400ms ${EASE}` }}
+               fill={dark ? "#cbd5e1" : "#e2e8f0"}>
+              {/* fuselage */}
+              <path d="M -6 100 L 44 96 Q 58 96 58 102 Q 58 108 44 108 L -6 106 Q -14 103 -6 100 Z" />
+              {/* nose */}
+              <ellipse cx="55" cy="102" rx="7" ry="5" fill={dark ? "#e5edf6" : "#f1f5f9"} />
+              {/* tail fin */}
+              <path d="M -4 100 L -16 84 L -8 84 L 6 99 Z" />
+              {/* main wing (top) */}
+              <path d="M 20 100 L 44 78 L 52 80 L 34 101 Z" fill={dark ? "#94a3b8" : "#cbd5e1"} />
+              {/* main wing (bottom) */}
+              <path d="M 20 106 L 44 128 L 52 126 L 34 105 Z" fill={dark ? "#94a3b8" : "#cbd5e1"} />
+            </g>
+            {/* cabin windows */}
+            {[10, 18, 26, 34].map((wx) => (
+              <circle key={wx} cx={wx} cy="103" r="1.4"
+                      fill={dark ? "#fde68a" : "#38bdf8"}
+                      opacity={dark ? 0.95 : 0.85} />
+            ))}
+            {/* blinking nav light */}
+            <circle cx="58" cy="102" r="1.8" fill="#ef4444" className="animate-twinkle" />
+          </g>
+        </g>
+
         {/* 2.5-D towers: lit front face + darker side extrusion + roof */}
         {BUILDINGS.map((b, bi) => {
           const y = 680 - b.h;

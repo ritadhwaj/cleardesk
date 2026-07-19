@@ -41,6 +41,14 @@ code, pre, .font-mono {
 .animate-drift   { animation: drift 14s ease-in-out infinite alternate; }
 .animate-drift-2 { animation: drift 19s ease-in-out infinite alternate-reverse; }
 
+/* airplane crossing the login skyline (SVG units, viewBox 0..800) */
+@keyframes fly {
+  0%   { transform: translate(-120px, 70px) scale(0.9); }
+  50%  { transform: translate(430px, 30px) scale(1); }
+  100% { transform: translate(920px, 90px) scale(0.9); }
+}
+.animate-fly { animation: fly 22s linear infinite; will-change: transform; }
+
 /* entrance animations */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(10px); }

@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useAuth } from "../store/auth";
 import ThemeToggle from "../components/ThemeToggle";
 import SkylineScene from "../components/SkylineScene";
+import ConstellationField from "../components/ConstellationField";
 
 export default function Login() {
   const login = useAuth((s) => s.login);
@@ -31,28 +32,33 @@ export default function Login() {
       {/* Brand panel */}
       {/* Deep indigo gradient + right border: this panel is the brand "constant" —
           identical in both themes and clearly distinct from the dark app background. */}
-      <div className="hidden lg:flex flex-col justify-between text-white p-12
+      <div className="hidden lg:flex flex-col justify-between text-white p-12 relative overflow-hidden
                       bg-gradient-to-br from-[#0a1128] via-[#16204a] to-[#0a1128]
                       border-r border-white/10
                       shadow-[inset_-24px_0_48px_-32px_rgba(0,0,0,0.6)]">
 
-        <div className="flex items-center gap-3">
+        {/* interactive floating node network — behind the text, reacts to hover */}
+        <ConstellationField />
+
+        <div className="relative z-10 flex items-center gap-3">
           <span className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
             <ShieldCheck size={24} />
           </span>
           <span className="text-xl font-bold tracking-tight">ClearDesk</span>
         </div>
-        <div className="space-y-5 max-w-md">
-          <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
+        {/* text gets a soft backdrop so it stays readable over the network */}
+        <div className="relative z-10 space-y-5 max-w-md">
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight
+                         [text-shadow:0_2px_24px_rgba(10,17,40,0.9)]">
             Two AI agents argue over every document.
             <span className="text-blue-400"> You make the call.</span>
           </h1>
-          <p className="text-slate-400 leading-relaxed">
+          <p className="text-slate-300 leading-relaxed [text-shadow:0_1px_16px_rgba(10,17,40,0.9)]">
             A Doc Agent extracts and documents. An adversarial Audit Agent blind-reads and
             challenges. Every claim is evidence-linked; every decision stays human.
           </p>
         </div>
-        <p className="text-xs text-slate-500">KYC · Loan Applications · Tax Filing</p>
+        <p className="relative z-10 text-xs text-slate-400">KYC · Loan Applications · Tax Filing</p>
       </div>
 
       {/* Form panel — animated skyline behind, glass card in front */}
