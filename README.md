@@ -156,6 +156,14 @@ Run `python scripts/check_gemini.py` to auto-detect a working Gemini model for y
 
 ---
 
+## Deploy (free cloud)
+
+The repo ships a `Dockerfile` (builds the frontend, serves it from the backend on
+one origin) and a Render `render.yaml` blueprint that provisions Postgres + the
+service automatically — no CORS or cross-URL config. Push to GitHub, then on
+[Render](https://render.com): **New → Blueprint → pick this repo → Apply**. Full
+step-by-step (plus Neon/Railway/Fly.io options): **[`DEPLOY.md`](DEPLOY.md)**.
+
 ## Docs
 
 Full system design — architecture, database schema, APIs, agent protocol, and demo script: [`docs/cleardesk-system-design.md`](docs/cleardesk-system-design.md)

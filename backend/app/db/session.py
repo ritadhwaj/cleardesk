@@ -3,7 +3,13 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from app.config import settings
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+# Managed Postgres providers (Render, Heroku) hand out "postgres://" URLs;
+# SQLAlchemy needs the "postgresql://" scheme.
+_db_url = settings.database_url
+if _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(_db_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 

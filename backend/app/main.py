@@ -1,16 +1,23 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.api import activity, auth, cases, documents, reviews, ws
+from app.config import settings
 from app.db.session import engine
 from app.db import models
 
 app = FastAPI(title="ClearDesk API", version="0.1.0")
 
+# Auth uses Bearer tokens (no cookies), so a wildcard origin is safe. In a
+# same-origin deployment (backend serves the SPA) CORS is not even exercised.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
@@ -43,8 +50,31 @@ def on_startup() -> None:
         db.commit()
     finally:
         db.close()
+    # auto-seed templates + demo users so a fresh deploy is ready to use
+    if settings.auto_seed:
+        try:
+            from app.db.seed import run as seed_run
+            seed_run()
+        except Exception as exc:  # noqa: BLE001 — never block startup
+            print(f"[startup] seed skipped: {exc}")
 
 
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+# ---- serve the built frontend (single-service deploy) ----------------------
+# In production the Docker image copies the Vite build into ./static; when
+# present we serve it same-origin so there is no CORS / cross-URL config.
+_STATIC = Path(__file__).resolve().parent.parent / "static"
+if _STATIC.is_dir():
+    if (_STATIC / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=_STATIC / "assets"), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa(full_path: str):
+        candidate = _STATIC / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_STATIC / "index.html")   # SPA fallback
