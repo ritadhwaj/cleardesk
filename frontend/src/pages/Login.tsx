@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
@@ -8,6 +9,7 @@ import ConstellationField from "../components/ConstellationField";
 
 export default function Login() {
   const login = useAuth((s) => s.login);
+  const navigate = useNavigate();
   const [email, setEmail] = useState("uploader@cleardesk.dev");
   const [password, setPassword] = useState("demo1234");
   const [error, setError] = useState("");
@@ -20,6 +22,7 @@ export default function Login() {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       login(data.access_token, data.role, data.full_name);
+      navigate("/", { replace: true });   // always start a fresh session at the dashboard
     } catch {
       setError("Invalid credentials — try the demo logins below.");
     } finally {

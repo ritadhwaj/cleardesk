@@ -17,8 +17,12 @@ export function useCaseSocket(caseId: string | undefined) {
       })
     ).catch(() => {});
 
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/ws/cases/${caseId}`);
+    // WebSocket lives under /api on the same origin (Vite proxies it in dev).
+    const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const wsBase = apiUrl
+      ? apiUrl.replace(/^http/, "ws")
+      : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+    const ws = new WebSocket(`${wsBase}/api/ws/cases/${caseId}`);
     ws.onopen = () => setConnected(true);
     ws.onmessage = (msg) => {
       const event: AgentEvent = JSON.parse(msg.data);
@@ -26,7 +30,13 @@ export function useCaseSocket(caseId: string | undefined) {
     };
     ws.onclose = () => setConnected(false);
     const ping = setInterval(() => ws.readyState === 1 && ws.send("ping"), 20000);
-    return () => { clearInterval(ping); ws.close(); };
+    return () => {
+      clearInterval(ping);
+      ws.onopen = ws.onmessage = ws.onclose = null;   // avoid stale-state churn
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+    };
   }, [caseId]);
 
   return { events, connected };

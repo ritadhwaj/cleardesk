@@ -20,6 +20,13 @@ export default function Layout() {
   // subscribe so a timezone change re-renders every page's dates
   useTimezone((s) => s.tz);
 
+  // clean logout: clear the session AND reset the URL so the next login
+  // starts fresh at the login screen / dashboard (not the last page).
+  const signOut = () => {
+    logout();
+    navigate("/", { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex flex-col relative">
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80
@@ -63,7 +70,7 @@ export default function Layout() {
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{fullName}</span>
               <span className="text-[11px] uppercase tracking-wider text-slate-400">{role}</span>
             </div>
-            <button onClick={logout} title="Sign out"
+            <button onClick={signOut} title="Sign out"
                     className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700
                                text-slate-500 dark:text-slate-400
                                hover:bg-slate-100 dark:hover:bg-slate-800

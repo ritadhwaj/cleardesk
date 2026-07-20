@@ -23,12 +23,14 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(cases.router, prefix="/cases", tags=["cases"])
-app.include_router(documents.router, prefix="/documents", tags=["documents"])
-app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
-app.include_router(activity.router, prefix="/activity", tags=["activity"])
-app.include_router(ws.router, tags=["ws"])
+# All API + WebSocket routes live under /api so they never collide with the
+# client-side SPA routes (e.g. /cases/new) that the frontend router owns.
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(cases.router, prefix="/api/cases", tags=["cases"])
+app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
+app.include_router(activity.router, prefix="/api/activity", tags=["activity"])
+app.include_router(ws.router, prefix="/api", tags=["ws"])   # → /api/ws/cases/{id}
 
 
 @app.on_event("startup")

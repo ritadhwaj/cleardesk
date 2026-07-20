@@ -1,9 +1,10 @@
 import axios from "axios";
 import { useAuth } from "../store/auth";
 
-// Same-origin by default (backend serves the SPA in production; Vite proxies
-// the API routes in dev). Override with VITE_API_URL for a split deployment.
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "" });
+// API lives under /api on the same origin (backend serves the SPA in
+// production; Vite proxies /api in dev). Override with VITE_API_URL for a
+// split deployment.
+export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || "/api" });
 
 api.interceptors.request.use((config) => {
   const token = useAuth.getState().token;
