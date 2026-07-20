@@ -66,9 +66,13 @@ export default function Layout() {
           <div className="flex items-center gap-3">
             <div className="hidden lg:block"><Clock /></div>
             <ThemeToggle />
-            <div className="hidden md:flex flex-col items-end leading-tight">
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{fullName}</span>
-              <span className="text-[11px] uppercase tracking-wider text-slate-400">{role}</span>
+            <div className="hidden md:flex flex-col items-end leading-tight shrink-0">
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                {fullName}
+              </span>
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 whitespace-nowrap">
+                {role}
+              </span>
             </div>
             <button onClick={signOut} title="Sign out"
                     className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700
