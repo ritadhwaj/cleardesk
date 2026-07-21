@@ -37,6 +37,10 @@ export default function ScorecardPanel({ caseId, events }: { caseId: string; eve
   const target = sc ? Number(sc.overall_score) : 0;
   const shown = useCountUp(target);
   const colors = scoreColors(target);
+  const compTarget = sc && sc.completeness_score != null ? Number(sc.completeness_score) : 0;
+  const compShown = useCountUp(compTarget);
+  const compColors = scoreColors(compTarget);
+  const hasCompleteness = !!sc && sc.completeness_score != null;
   const R = 56, C = 2 * Math.PI * R;
 
   if (!sc) {
@@ -76,6 +80,28 @@ export default function ScorecardPanel({ caseId, events }: { caseId: string; eve
             </span>
           </div>
         </div>
+
+        {/* completeness ring */}
+        {hasCompleteness && (
+          <div className="relative w-36 h-36 shrink-0">
+            <svg viewBox="0 0 128 128" className="w-full h-full -rotate-90">
+              <circle cx="64" cy="64" r={R} fill="none" strokeWidth="10"
+                      className="stroke-slate-200 dark:stroke-slate-800 transition-colors duration-500" />
+              <circle cx="64" cy="64" r={R} fill="none" stroke={compColors.stroke} strokeWidth="10"
+                      strokeLinecap="round" strokeDasharray={C}
+                      strokeDashoffset={C - (C * compShown) / 100}
+                      style={{ transition: "stroke-dashoffset 0.1s linear" }} />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-3xl font-extrabold tabular-nums ${compColors.text}`}>
+                {compShown.toFixed(0)}%
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">
+                completeness
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 min-w-[240px] space-y-4">
           <div className="grid grid-cols-3 gap-3 text-center">

@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, MessagesSquare, Files, ClipboardCheck, CheckCircle2, XCircle,
   History, FileSpreadsheet, FileDown, Pencil, Trash2, Plus, RotateCw, Loader2,
-  ScrollText,
+  ScrollText, Check, X,
 } from "lucide-react";
 import { useCaseSocket } from "../hooks/useCaseSocket";
 import {
@@ -68,10 +68,13 @@ interface Discrepancy {
   id: string; kind: string; severity: string; title: string;
   detail: Record<string, unknown>; resolution: string;
 }
+interface ChecklistItem { code: string; name: string; mandatory: boolean; present: boolean }
 interface Detail {
   ref_no: string; name: string; status: string;
-  inferred_process: string | null; inference_confidence: number;
+  inferred_process: string | null; inferred_process_name: string | null;
+  inference_confidence: number;
   scorecard_count: number;
+  checklist: ChecklistItem[] | null; completeness: number | null;
   uploads: { id: string; filename: string }[];
   runs: RunAudit[];
   documents: Doc[]; discrepancies: Discrepancy[];
@@ -274,7 +277,60 @@ export default function CaseDetail() {
       {tab === "agents" && <AgentFeed events={events} />}
 
       {tab === "documents" && (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="space-y-4">
+          {/* checklist against the template */}
+          {detail?.checklist && detail.checklist.length > 0 && (
+            <div className="card p-5 animate-fade-up">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold h-page">
+                  Document checklist
+                  {detail.inferred_process_name && (
+                    <span className="ml-2 text-sm font-normal text-slate-400">
+                      · {detail.inferred_process_name}
+                    </span>
+                  )}
+                </h2>
+                {detail.completeness !== null && (
+                  <span className={`text-sm font-bold px-3 py-1 rounded-full
+                      ${detail.completeness >= 100 ? "chip-emerald"
+                        : detail.completeness >= 50 ? "chip-amber" : "chip-red"}`}>
+                    {detail.completeness.toFixed(0)}% complete
+                  </span>
+                )}
+              </div>
+              <ul className="grid sm:grid-cols-2 gap-2">
+                {detail.checklist.map((c, i) => (
+                  <li key={c.code}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 animate-fade-up
+                                 bg-slate-50 dark:bg-slate-800/60"
+                      style={{ animationDelay: `${i * 40}ms` }}>
+                    {c.present ? (
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center
+                                       justify-center shrink-0 animate-scale-in">
+                        <Check size={14} />
+                      </span>
+                    ) : (
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 animate-scale-in
+                                       ${c.mandatory ? "bg-red-500 text-white"
+                                                     : "bg-slate-300 dark:bg-slate-600 text-white"}`}>
+                        <X size={14} />
+                      </span>
+                    )}
+                    <span className={`text-sm ${c.present
+                        ? "text-slate-700 dark:text-slate-200"
+                        : "text-slate-500 dark:text-slate-400"}`}>
+                      {c.name}
+                    </span>
+                    {c.mandatory
+                      ? <span className="ml-auto text-[10px] font-bold text-red-500 uppercase">required</span>
+                      : <span className="ml-auto text-[10px] text-slate-400 uppercase">optional</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-4">
           {detail?.documents.map((d, i) => (
             <div key={d.id} className="card card-hover p-5 animate-fade-up"
                  style={{ animationDelay: `${i * 60}ms` }}>
@@ -313,6 +369,7 @@ export default function CaseDetail() {
               No documents processed yet.
             </p>
           )}
+          </div>
         </div>
       )}
 

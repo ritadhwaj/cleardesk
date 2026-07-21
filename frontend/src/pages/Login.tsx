@@ -65,7 +65,7 @@ export default function Login() {
       </div>
 
       {/* Form panel — animated skyline behind, glass card in front */}
-      <div className="relative flex items-center justify-center p-8 overflow-hidden">
+      <div className="relative flex items-center justify-center p-5 sm:p-8 overflow-y-auto">
         <SkylineScene />
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <form onSubmit={submit}

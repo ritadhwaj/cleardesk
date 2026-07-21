@@ -10,11 +10,13 @@ from app.db import models
 
 KYC_TEMPLATE = {
     "code": "KYC",
-    "name": "KYC Verification",
+    "name": "Full KYC Verification",
+    "description": "Complete Know-Your-Customer identity + address verification.",
     "required_docs": [
         {"doc_type": "PAN", "mandatory": True},
         {"doc_type": "AADHAAR", "mandatory": True},
-        {"doc_type": "PHOTO", "mandatory": False},
+        {"doc_type": "PHOTO", "mandatory": True},
+        {"doc_type": "UTILITY_BILL", "mandatory": False},
     ],
     "rules": [
         {"rule_id": "KYC-01", "description": "Name must match across PAN and Aadhaar", "severity": "FAIL"},
@@ -26,12 +28,15 @@ KYC_TEMPLATE = {
 LOAN_TEMPLATE = {
     "code": "LOAN",
     "name": "Home Loan Application",
+    "description": "Secured home loan — identity, income and banking proof.",
     "required_docs": [
+        {"doc_type": "LOAN_FORM", "mandatory": True},
         {"doc_type": "PAN", "mandatory": True},
         {"doc_type": "AADHAAR", "mandatory": True},
         {"doc_type": "PAYSLIP", "mandatory": True},
         {"doc_type": "BANK_STMT", "mandatory": True},
-        {"doc_type": "ITR", "mandatory": False},
+        {"doc_type": "FORM16", "mandatory": False},
+        {"doc_type": "ITR_ACK", "mandatory": False},
     ],
     "rules": [
         {"rule_id": "LOAN-01", "description": "Declared income on payslip must match bank credits within 10%", "severity": "FAIL"},
@@ -179,37 +184,64 @@ DOC_TYPES += [
 ]
 
 
-def _p(code, name, docs, rules=None):
-    return {"code": code, "name": name,
+def _p(code, name, description, docs, rules=None):
+    return {"code": code, "name": name, "description": description,
             "required_docs": [{"doc_type": d, "mandatory": m} for d, m in docs],
             "rules": rules or [
                 {"rule_id": f"{code}-01",
                  "description": "Applicant name consistent across all documents",
                  "severity": "FAIL"}]}
 
+# Real-world bank workflows requiring document verification, each with its
+# mandatory + optional document checklist.
 EXTRA_PROCESSES = [
-    _p("NEW_ACCOUNT", "New Account Opening",
+    _p("NEW_ACCOUNT", "Savings Account Opening",
+       "Open a new savings account — identity, address & photo.",
        [("ACCOUNT_FORM", True), ("PAN", True), ("AADHAAR", True),
-        ("PHOTO", False), ("SIGNATURE_CARD", False)]),
+        ("PHOTO", True), ("SIGNATURE_CARD", False), ("UTILITY_BILL", False)]),
     _p("CREDIT_CARD", "Credit Card Application",
-       [("CC_FORM", True), ("PAN", True), ("PAYSLIP", False)]),
+       "Apply for a credit card — identity + income eligibility.",
+       [("CC_FORM", True), ("PAN", True), ("AADHAAR", True),
+        ("PAYSLIP", True), ("BANK_STMT", False)]),
     _p("CAR_LOAN", "Car Loan Application",
-       [("CAR_LOAN_FORM", True), ("PAN", False), ("PAYSLIP", False), ("VEHICLE_QUOTE", False)]),
+       "Vehicle loan — identity, income and the vehicle quotation.",
+       [("CAR_LOAN_FORM", True), ("PAN", True), ("AADHAAR", True),
+        ("PAYSLIP", True), ("VEHICLE_QUOTE", True), ("BANK_STMT", False)]),
     _p("PERSONAL_LOAN", "Personal Loan Application",
-       [("PL_FORM", True), ("PAN", False), ("PAYSLIP", True)]),
-    _p("BUSINESS_LOAN", "Business Loan (MSME)",
-       [("BL_FORM", True), ("GST_CERT", True), ("BANK_STMT", False)]),
+       "Unsecured personal loan — identity + income proof.",
+       [("PL_FORM", True), ("PAN", True), ("AADHAAR", True),
+        ("PAYSLIP", True), ("BANK_STMT", True)]),
+    _p("BUSINESS_LOAN", "MSME / Business Loan",
+       "Business loan — proprietor KYC, GST and bank statements.",
+       [("BL_FORM", True), ("PAN", True), ("GST_CERT", True),
+        ("BANK_STMT", True), ("ITR_ACK", False)]),
     _p("LOCKER", "Locker Facility Request",
-       [("LOCKER_FORM", True), ("PAN", False), ("PHOTO", False)]),
-    _p("DEBIT_CARD", "Debit Card Issuance", [("DEBIT_CARD_FORM", True)]),
-    _p("FASTAG", "FASTag Registration", [("FASTAG_FORM", True)]),
-    _p("CHEQUE_BOOK", "Cheque Book Request", [("CHEQUE_BOOK_FORM", True)]),
+       "Safe-deposit locker — account holder KYC + photo.",
+       [("LOCKER_FORM", True), ("PAN", True), ("AADHAAR", True), ("PHOTO", False)]),
+    _p("DEBIT_CARD", "Debit Card Issuance",
+       "Issue / reissue a debit card for an existing account.",
+       [("DEBIT_CARD_FORM", True), ("AADHAAR", False)]),
+    _p("FASTAG", "FASTag Registration",
+       "NETC FASTag — owner KYC + vehicle details.",
+       [("FASTAG_FORM", True), ("PAN", False), ("AADHAAR", False)]),
+    _p("CHEQUE_BOOK", "Cheque Book Request",
+       "Request a new cheque book on an existing account.",
+       [("CHEQUE_BOOK_FORM", True)]),
     _p("DORMANT_REACT", "Dormant Account Reactivation",
-       [("REACTIVATION_FORM", True), ("PAN", True), ("AADHAAR", False)]),
-    _p("KYC_PARTIAL", "KYC Update (Partial)",
-       [("KYC_FORM", True), ("UTILITY_BILL", False)]),
-    _p("NACH_SI", "NACH / Standing Instruction Setup", [("NACH_FORM", True)]),
-    _p("PASSBOOK", "Passbook Issue / Reissue", [("PASSBOOK_FORM", True)]),
+       "Reactivate an inactive account — fresh KYC required.",
+       [("REACTIVATION_FORM", True), ("PAN", True), ("AADHAAR", True)]),
+    _p("KYC_PARTIAL", "Partial KYC Update",
+       "Update a single KYC field (e.g. address) with proof.",
+       [("KYC_FORM", True), ("UTILITY_BILL", True)]),
+    _p("NACH_SI", "NACH / Standing Instruction",
+       "Set up an auto-debit mandate (SIP, EMI, utility).",
+       [("NACH_FORM", True), ("BANK_STMT", False)]),
+    _p("PASSBOOK", "Passbook Issue / Reissue",
+       "Issue or reprint an account passbook.",
+       [("PASSBOOK_FORM", True)]),
+    _p("MOBILE_BANKING", "Mobile / Net Banking Registration",
+       "Enrol an existing customer for digital banking.",
+       [("PAN", True), ("AADHAAR", True), ("DEBIT_CARD_FORM", False)]),
 ]
 
 
@@ -217,11 +249,19 @@ def run() -> None:
     models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        existing_p = {p.code for p in db.query(models.ProcessTemplate).all()}
+        by_code = {p.code: p for p in db.query(models.ProcessTemplate).all()}
         TAX_TEMPLATE = _p("TAX", "Tax Filing Support",
-                          [("FORM16", True), ("ITR_ACK", False), ("PAN", False)])
+                          "Income-tax filing support — Form 16 / ITR.",
+                          [("FORM16", True), ("ITR_ACK", True), ("PAN", True),
+                           ("BANK_STMT", False)])
         for t in [KYC_TEMPLATE, LOAN_TEMPLATE, TAX_TEMPLATE] + EXTRA_PROCESSES:
-            if t["code"] not in existing_p:
+            existing = by_code.get(t["code"])
+            if existing:   # refresh checklist/description on re-seed
+                existing.name = t["name"]
+                existing.description = t.get("description")
+                existing.required_docs = t["required_docs"]
+                existing.rules = t["rules"]
+            else:
                 db.add(models.ProcessTemplate(**t))
         # upsert doc types by code, so re-running seed adds newly defined ones
         existing = {t.code for t in db.query(models.DocTypeTemplate).all()}

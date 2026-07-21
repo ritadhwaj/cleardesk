@@ -18,14 +18,47 @@ from app.services.activity import log_activity
 router = APIRouter()
 
 
+class CaseCreateIn(BaseModel):
+    process: str | None = None   # template code chosen by the user, e.g. "CAR_LOAN"
+
+
 @router.post("")
-def create_case(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+def create_case(body: CaseCreateIn | None = None,
+                db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     case = models.Case(created_by=user.id, status="UPLOADED", updated_by=user.full_name)
+    # If the user picked a template up front, lock it in (agents won't re-infer).
+    code = (body.process if body else None)
+    if code:
+        tpl = db.query(models.ProcessTemplate).filter_by(code=code).first()
+        if tpl:
+            case.inferred_process_id = tpl.id
+            case.inference_confidence = 100
+            case.name = tpl.name
     db.add(case)
     db.commit()
     db.refresh(case)
-    log_activity(user, "CASE_CREATED", "CASE", f"Created case {case.ref_no}", case)
+    log_activity(user, "CASE_CREATED", "CASE",
+                 f"Created case {case.ref_no}" + (f" ({code})" if code else ""), case)
     return {"id": str(case.id), "status": case.status}
+
+
+@router.get("/templates")
+def list_templates(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Bank-service templates with their mandatory/optional document checklist."""
+    doc_names = {t.code: t.display_name for t in db.query(models.DocTypeTemplate).all()}
+    out = []
+    for p in db.query(models.ProcessTemplate).order_by(models.ProcessTemplate.name).all():
+        docs = [{"code": r["doc_type"],
+                 "name": doc_names.get(r["doc_type"], r["doc_type"]),
+                 "mandatory": bool(r.get("mandatory"))}
+                for r in (p.required_docs or [])]
+        out.append({
+            "code": p.code, "name": p.name, "description": p.description,
+            "mandatory": sum(1 for d in docs if d["mandatory"]),
+            "optional": sum(1 for d in docs if not d["mandatory"]),
+            "docs": docs,
+        })
+    return out
 
 
 @router.post("/{case_id}/uploads")
@@ -154,14 +187,14 @@ def delete_upload(case_id: uuid.UUID, upload_id: uuid.UUID,
 def export_case(case_id: uuid.UUID, format: str = "xlsx",
                 db: Session = Depends(get_db),
                 user: models.User = Depends(current_user)):
-    from app.services.export import build_export, export_filename
+    from app.services.export import build_export
     case = db.query(models.Case).get(case_id)
     if not case:
         raise HTTPException(404, "Case not found")
     if format not in ("xlsx", "pdf"):
         raise HTTPException(400, "format must be xlsx or pdf")
-    data, media_type = build_export(db, case, format)
-    fname = f"{export_filename()}.{format}"
+    data, media_type, base = build_export(db, case, format)
+    fname = f"{base}.{format}"
     log_activity(user, f"EXPORTED_{format.upper()}", "EXPORT",
                  f"Exported case scorecard as {fname}", case)
     return Response(content=data, media_type=media_type,
@@ -292,14 +325,21 @@ def case_detail(case_id: uuid.UUID, db: Session = Depends(get_db),
     scorecard_count = db.query(models.Scorecard).filter(
         models.Scorecard.case_id == case_id).count()
 
+    # live checklist against the (selected/inferred) template
+    from app.services.scoring import compute_checklist
+    checklist, completeness = compute_checklist(db, case_id)
+
     return {
         "id": str(case.id),
         "ref_no": case.ref_no,
         "name": case.name,
         "status": case.status,
         "inferred_process": process.code if process else None,
+        "inferred_process_name": process.name if process else None,
         "inference_confidence": float(case.inference_confidence or 0),
         "scorecard_count": scorecard_count,
+        "checklist": checklist,
+        "completeness": completeness,
         "uploads": [{"id": str(u.id), "filename": Path(u.file_path).name} for u in uploads],
         "runs": [
             {"run_no": r.run_no, "trigger": r.trigger, "note": r.note,
@@ -343,9 +383,17 @@ def get_scorecard(case_id: uuid.UUID, db: Session = Depends(get_db),
     )
     if not sc:
         raise HTTPException(404, "No scorecard yet")
+    # older scorecards predate completeness — compute it live as a fallback
+    completeness = sc.completeness_score
+    checklist = sc.checklist
+    if completeness is None:
+        from app.services.scoring import compute_checklist
+        checklist, completeness = compute_checklist(db, case_id)
     return {
         "version": sc.version,
         "overall_score": float(sc.overall_score),
+        "completeness_score": float(completeness) if completeness is not None else None,
+        "checklist": checklist,
         "doc_scores": sc.doc_scores,
         "summary": sc.summary,
         "auto_verified": sc.auto_verified_count,

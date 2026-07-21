@@ -331,7 +331,8 @@ export default function GlobePicker({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4
                     bg-slate-950/70 backdrop-blur-sm animate-fade-in"
          onClick={onClose}>
-      <div className="card p-6 w-full max-w-3xl animate-scale-in" onClick={(e) => e.stopPropagation()}>
+      <div className="card p-5 sm:p-6 w-full max-w-3xl max-h-[92vh] overflow-y-auto animate-scale-in"
+           onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="flex items-center gap-2 text-lg font-bold h-page">
             <Globe2 size={20} className="text-indigo-500" /> Choose your timezone
@@ -344,9 +345,11 @@ export default function GlobePicker({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="grid md:grid-cols-[380px_1fr] gap-6 items-center">
+        <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-6 items-center">
           <div className="flex flex-col items-center">
-            <canvas ref={canvasRef} className="cursor-pointer" style={{ width: 380, height: 380 }} />
+            <canvas ref={canvasRef}
+                    className="cursor-pointer w-full max-w-[340px] sm:max-w-[380px]"
+                    style={{ aspectRatio: "1 / 1" }} />
             <div className="flex items-center gap-4 mt-2 text-[11px] text-slate-400 dark:text-slate-500">
               <span className="flex items-center gap-1"><Sun size={12} className="text-sky-400" /> day</span>
               <span className="flex items-center gap-1"><Moon size={12} className="text-amber-300" /> night · lights blink</span>

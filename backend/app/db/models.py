@@ -41,6 +41,7 @@ class ProcessTemplate(Base):
     name = Column(String)
     required_docs = Column(JSONB)   # [{doc_type:'PAN', mandatory:true}, ...]
     rules = Column(JSONB)           # [{rule_id, description, severity}, ...]
+    description = Column(Text)       # short human blurb for the template picker
 
 
 class DocTypeTemplate(Base):
@@ -151,6 +152,8 @@ class Scorecard(Base):
     auto_verified_count = Column(Integer, default=0)
     review_needed_count = Column(Integer, default=0)
     hard_fail_count = Column(Integer, default=0)
+    completeness_score = Column(Numeric(5, 2))   # % of the template's required docs present
+    checklist = Column(JSONB)                    # [{code,name,mandatory,present}]
     created_at = Column(DateTime, default=now_ist)
 
 

@@ -47,9 +47,17 @@ export interface RunAudit {
     deleted: { field: string; old: string }[];
   } | null;
 }
+export interface ChecklistItem { code: string; name: string; mandatory: boolean; present: boolean }
 export interface Scorecard {
-  version: number; overall_score: number; doc_scores: Record<string, number>;
+  version: number; overall_score: number;
+  completeness_score: number | null; checklist: ChecklistItem[] | null;
+  doc_scores: Record<string, number>;
   summary: string; auto_verified: number; review_needed: number; hard_fail: number;
+}
+export interface Template {
+  code: string; name: string; description: string | null;
+  mandatory: number; optional: number;
+  docs: { code: string; name: string; mandatory: boolean }[];
 }
 export interface AgentEvent {
   id: number; agent: string; type: string; payload: Record<string, unknown>; at: string;
@@ -120,7 +128,10 @@ export const exportCaseActivity = async (caseId: string, format: "xlsx" | "pdf")
     { params: { format }, responseType: "blob" });
   downloadBlobResponse(r, `activity_log.${format}`);
 };
-export const createCase = () => api.post<{ id: string }>("/cases").then((r) => r.data);
+export const createCase = (process?: string) =>
+  api.post<{ id: string }>("/cases", { process }).then((r) => r.data);
+export const getTemplates = () =>
+  api.get<Template[]>("/cases/templates").then((r) => r.data);
 export const uploadFiles = (caseId: string, files: File[]) => {
   const form = new FormData();
   files.forEach((f) => form.append("files", f));

@@ -160,6 +160,13 @@ def _infer_process(case_id: str, doc_types: list[str]) -> None:
     types = set(doc_types)
     db = SessionLocal()
     try:
+        case0 = db.query(models.Case).get(case_id)
+        if case0 and case0.inferred_process_id and float(case0.inference_confidence or 0) >= 100:
+            # user picked a template up front — respect it, don't re-infer
+            tpl = db.query(models.ProcessTemplate).get(case0.inferred_process_id)
+            emit(case_id, ME, "finding",
+                 {"message": f"Verifying against selected template: {tpl.code if tpl else '?'}"})
+            return
         best, best_score = None, 0.0
         for t in db.query(models.ProcessTemplate).all():
             req = [r["doc_type"] for r in (t.required_docs or [])]

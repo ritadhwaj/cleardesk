@@ -49,7 +49,8 @@ def build_table_export(title: str, headers: list, rows: list, fmt: str) -> tuple
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
-                            topMargin=14 * mm, bottomMargin=12 * mm)
+                            topMargin=14 * mm, bottomMargin=12 * mm,
+                            title=title, author="ClearDesk", creator="ClearDesk")
     styles = getSampleStyleSheet()
     body = [[Paragraph(str(c), styles["BodyText"]) for c in row] for row in rows]
     t = Table([headers] + body, repeatRows=1)
@@ -173,7 +174,7 @@ def _build_xlsx(data: dict) -> bytes:
 
 # ------------------------------------------------------------------ PDF
 
-def _build_pdf(data: dict) -> bytes:
+def _build_pdf(data: dict, doc_title: str = "ClearDesk Case Scorecard") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
@@ -182,7 +183,9 @@ def _build_pdf(data: dict) -> bytes:
                                     TableStyle)
 
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=18 * mm, bottomMargin=16 * mm)
+    # document metadata (title/author) — shown by PDF viewers instead of "anonymous"
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=18 * mm, bottomMargin=16 * mm,
+                            title=doc_title, author="ClearDesk", creator="ClearDesk")
     styles = getSampleStyleSheet()
     story = [Paragraph("ClearDesk — Case Scorecard", styles["Title"]),
              Spacer(1, 4 * mm)]
@@ -223,9 +226,13 @@ def _build_pdf(data: dict) -> bytes:
     return buf.getvalue()
 
 
-def build_export(db: Session, case: models.Case, fmt: str) -> tuple[bytes, str]:
+def build_export(db: Session, case: models.Case, fmt: str) -> tuple[bytes, str, str]:
+    """Returns (content, media_type, filename) — the same base filename is used
+    for the download and as the PDF's internal document title."""
     data = _collect(db, case)
+    fname = export_filename()
     if fmt == "xlsx":
-        return _build_xlsx(data), \
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    return _build_pdf(data), "application/pdf"
+        return (_build_xlsx(data),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fname)
+    return _build_pdf(data, doc_title=fname), "application/pdf", fname

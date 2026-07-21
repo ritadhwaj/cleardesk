@@ -82,6 +82,8 @@ def recompute_scorecard(db: Session, case_id: uuid.UUID) -> models.Scorecard:
         .order_by(models.Scorecard.version.desc())
         .first()
     )
+    checklist, completeness = compute_checklist(db, case_id)
+
     sc = models.Scorecard(
         case_id=case_id,
         version=(last.version + 1) if last else 1,
@@ -91,6 +93,36 @@ def recompute_scorecard(db: Session, case_id: uuid.UUID) -> models.Scorecard:
         auto_verified_count=auto_verified,
         review_needed_count=review_needed + len(open_discrepancies),
         hard_fail_count=hard_fails,
+        completeness_score=completeness,
+        checklist=checklist,
     )
     db.add(sc)
     return sc
+
+
+def compute_checklist(db: Session, case_id):
+    """Against the case's template, which required documents are present.
+    Returns (checklist rows, completeness % over mandatory docs)."""
+    case = db.query(models.Case).get(case_id)
+    if not case or not case.inferred_process_id:
+        return [], None
+    tpl = db.query(models.ProcessTemplate).get(case.inferred_process_id)
+    if not tpl or not tpl.required_docs:
+        return [], None
+
+    doc_names = {t.code: t.display_name for t in db.query(models.DocTypeTemplate).all()}
+    type_by_id = {t.id: t.code for t in db.query(models.DocTypeTemplate).all()}
+    present = set()
+    for d in db.query(models.Document).filter(models.Document.case_id == case_id).all():
+        if d.doc_type_id and d.status == "IDENTIFIED":
+            present.add(type_by_id.get(d.doc_type_id))
+
+    checklist = [
+        {"code": r["doc_type"], "name": doc_names.get(r["doc_type"], r["doc_type"]),
+         "mandatory": bool(r.get("mandatory")), "present": r["doc_type"] in present}
+        for r in tpl.required_docs
+    ]
+    mand = [c for c in checklist if c["mandatory"]]
+    completeness = (round(100 * sum(1 for c in mand if c["present"]) / len(mand), 2)
+                    if mand else 100.0)
+    return checklist, completeness

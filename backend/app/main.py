@@ -44,6 +44,9 @@ def on_startup() -> None:
         conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS ref_no VARCHAR(16)"))
         conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS name VARCHAR"))
         conn.execute(text("ALTER TABLE cases ADD COLUMN IF NOT EXISTS updated_by VARCHAR"))
+        conn.execute(text("ALTER TABLE process_templates ADD COLUMN IF NOT EXISTS description TEXT"))
+        conn.execute(text("ALTER TABLE scorecards ADD COLUMN IF NOT EXISTS completeness_score NUMERIC(5,2)"))
+        conn.execute(text("ALTER TABLE scorecards ADD COLUMN IF NOT EXISTS checklist JSONB"))
     db = SessionLocal()
     try:
         for case in db.query(models.Case).filter(models.Case.ref_no.is_(None)).all():
