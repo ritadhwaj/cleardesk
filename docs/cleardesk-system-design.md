@@ -99,7 +99,7 @@ typed forms, PDFs, and simulated neat/messy handwriting.
 | File storage | Local disk (hackathon) → S3/MinIO path in schema | Store only file paths in DB. |
 | Real-time | WebSocket (FastAPI native) | Live agent activity feed in the UI. |
 | OCR / Vision | LLM vision API (Claude / GPT-4o) primary; `pytesseract` fallback | Vision LLM does OCR + understanding in one call — huge time saver. |
-| Auth | JWT (`python-jose`) + bcrypt | Two roles: `uploader`, `reviewer`. |
+| Auth | JWT (`python-jose`) + bcrypt | Roles: `uploader`, `reviewer`, `admin` (see §0 for the access rules as built). |
 
 **Why not Java?** Spring Boot is great for production banking, but you'd spend the weekend writing boilerplate and calling Python AI tools over HTTP anyway.
 **Why not Mongo?** Your data is inherently relational (case → documents → fields → discrepancies → reviews) and judges will ask about audit integrity. Postgres + JSONB is the best of both.
