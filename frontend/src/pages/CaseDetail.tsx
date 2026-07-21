@@ -101,9 +101,14 @@ export default function CaseDetail() {
   const role = useAuth((s) => s.role);
   useTimezone((s) => s.tz);
 
-  // drag-and-drop for adding documents in the edit & retry panel
+  // drag-and-drop for adding documents in the edit & retry panel (dedupe by name)
   const addDrop = useDropzone({
-    onDrop: (accepted) => setNewFiles((p) => [...p, ...accepted]),
+    noKeyboard: true,
+    onDrop: (accepted) => setNewFiles((prev) => {
+      const byName = new Map(prev.map((f) => [f.name, f]));
+      accepted.forEach((f) => byName.set(f.name, f));
+      return Array.from(byName.values());
+    }),
   });
 
   const refresh = () => { if (caseId) getCase(caseId).then(setDetail).catch(() => {}); };

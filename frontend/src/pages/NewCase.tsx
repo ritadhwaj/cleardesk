@@ -25,8 +25,15 @@ export default function NewCase() {
 
   useEffect(() => { getTemplates().then(setTemplates).catch(() => setTemplates([])); }, []);
 
+  // add files, replacing any existing file with the same name (dedupe)
+  const addFiles = (accepted: File[]) =>
+    setFiles((prev) => {
+      const byName = new Map(prev.map((f) => [f.name, f]));
+      accepted.forEach((f) => byName.set(f.name, f));
+      return Array.from(byName.values());
+    });
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (accepted) => setFiles((prev) => [...prev, ...accepted]),
+    onDrop: addFiles, noKeyboard: true,
   });
   const removeFile = (name: string) => setFiles((f) => f.filter((x) => x.name !== name));
 
