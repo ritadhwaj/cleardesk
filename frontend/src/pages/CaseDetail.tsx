@@ -243,8 +243,13 @@ export default function CaseDetail() {
               </div>
               <ul className="mt-2 space-y-1">
                 {newFiles.map((f) => (
-                  <li key={f.name} className="text-xs text-emerald-600 dark:text-emerald-400">
-                    + {f.name}
+                  <li key={f.name}
+                      className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    <span className="flex-1 truncate">+ {f.name}</span>
+                    <button onClick={() => setNewFiles((p) => p.filter((x) => x.name !== f.name))}
+                            className="text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors">
+                      <X size={13} />
+                    </button>
                   </li>
                 ))}
               </ul>
