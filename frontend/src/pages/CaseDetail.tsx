@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useDropzone } from "react-dropzone";
 import {
   ArrowLeft, MessagesSquare, Files, ClipboardCheck, CheckCircle2, XCircle,
   History, FileSpreadsheet, FileDown, Pencil, Trash2, Plus, RotateCw, Loader2,
@@ -97,9 +98,13 @@ export default function CaseDetail() {
   const [note, setNote] = useState("");
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
   const role = useAuth((s) => s.role);
   useTimezone((s) => s.tz);
+
+  // drag-and-drop for adding documents in the edit & retry panel
+  const addDrop = useDropzone({
+    onDrop: (accepted) => setNewFiles((p) => [...p, ...accepted]),
+  });
 
   const refresh = () => { if (caseId) getCase(caseId).then(setDetail).catch(() => {}); };
   useEffect(refresh, [caseId,
@@ -216,11 +221,19 @@ export default function CaseDetail() {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                 Add documents
               </p>
-              <input ref={fileInput} type="file" multiple hidden
-                     onChange={(e) => setNewFiles((p) => [...p, ...Array.from(e.target.files ?? [])])} />
-              <button onClick={() => fileInput.current?.click()} className="btn btn-ghost w-full">
-                <Plus size={15} /> Choose files
-              </button>
+              <div {...addDrop.getRootProps()}
+                   className={`rounded-xl border-2 border-dashed px-4 py-5 text-center cursor-pointer
+                               transition-all duration-200
+                               ${addDrop.isDragActive
+                                 ? "border-slate-900 bg-slate-100 dark:border-white dark:bg-slate-800"
+                                 : `border-slate-300 dark:border-slate-700 hover:border-slate-400
+                                    dark:hover:border-slate-500 hover:bg-slate-50/60 dark:hover:bg-slate-800/40`}`}>
+                <input {...addDrop.getInputProps()} />
+                <Plus size={18} className="mx-auto text-slate-400 mb-1" />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {addDrop.isDragActive ? "Drop files here" : "Drag & drop, or click to choose"}
+                </p>
+              </div>
               <ul className="mt-2 space-y-1">
                 {newFiles.map((f) => (
                   <li key={f.name} className="text-xs text-emerald-600 dark:text-emerald-400">
