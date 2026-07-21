@@ -78,33 +78,39 @@ def _cache_put(key: str, value: dict) -> None:
 
 
 def call_agent(agent_name: str, user_content: list | str, max_tokens: int = 2048) -> dict:
-    """Call the configured LLM with the agent's system prompt. Returns parsed JSON."""
+    """Call the configured LLM with the agent's system prompt. Returns parsed JSON.
+    Logs the prompt + reply in a human-readable form when logging is enabled."""
     if isinstance(user_content, str):
         user_content = [{"type": "text", "text": user_content}]
 
     provider = settings.llm_provider.lower()
+    source = provider
     if provider == "mock":
-        return _mock(agent_name)
-
-    cache_key = hashlib.sha256(
-        json.dumps([provider, agent_name, user_content], sort_keys=True).encode()
-    ).hexdigest()
-    if settings.llm_cache:
-        cached = _cache_get(cache_key)
-        if cached is not None:
-            return cached
-
-    if provider == "gemini":
-        text = _gemini(agent_name, user_content, max_tokens)
-    elif provider == "ollama":
-        text = _ollama(agent_name, user_content, max_tokens)
+        result = _mock(agent_name)
     else:
-        text = _anthropic(agent_name, user_content, max_tokens)
+        cache_key = hashlib.sha256(
+            json.dumps([provider, agent_name, user_content], sort_keys=True).encode()
+        ).hexdigest()
+        cached = _cache_get(cache_key) if settings.llm_cache else None
+        if cached is not None:
+            result, source = cached, "cache"
+        else:
+            if provider == "gemini":
+                text = _gemini(agent_name, user_content, max_tokens)
+            elif provider == "ollama":
+                text = _ollama(agent_name, user_content, max_tokens)
+            else:
+                text = _anthropic(agent_name, user_content, max_tokens)
+            text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+            result = json.loads(text)
+            if settings.llm_cache:
+                _cache_put(cache_key, result)
 
-    text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
-    result = json.loads(text)
-    if settings.llm_cache:
-        _cache_put(cache_key, result)
+    try:
+        from app.services.agent_log import log_prompt
+        log_prompt(agent_name, load_prompt(agent_name), user_content, result, source)
+    except Exception:  # noqa: BLE001 — logging must never break a call
+        pass
     return result
 
 

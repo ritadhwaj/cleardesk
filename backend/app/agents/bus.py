@@ -36,6 +36,12 @@ class AgentBus:
     async def send(self, sender: str, recipient: str, msg_type: str, payload: dict) -> None:
         # Audit trail + live UI feed. 'message' key is what humans read in the feed.
         emit(self.case_id, sender, msg_type.lower(), {**payload, "to": recipient})
+        # human-readable log of the agent-to-agent conversation
+        try:
+            from app.services.agent_log import log_message
+            log_message(sender, recipient, msg_type, str(payload.get("message", "")))
+        except Exception:  # noqa: BLE001
+            pass
         await self.inboxes[recipient].put(Message(sender=sender, type=msg_type, payload=payload))
 
     async def receive(self, agent: str) -> Message:

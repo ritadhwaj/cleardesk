@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     max_cross_verify_rounds: int = 3
     llm_min_interval_s: float = 6.0  # spacing between LLM calls (free-tier friendly)
     auto_seed: bool = True           # seed templates + demo users on startup
+    log_agent_prompts: bool = True   # log agent prompts + messages to console + file
 
     class Config:
         env_file = ".env"
