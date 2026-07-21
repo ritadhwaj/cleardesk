@@ -37,13 +37,18 @@ The process inference is **data-driven**: each business process is a template ro
 **Verification pipeline**
 - Parallel Doc/Audit agents with a live challenge → defend/concede → verdict loop.
 - Handwritten *and* typed forms across PNG / JPG / WEBP / PDF; honest confidence on messy handwriting.
-- Deterministic, tamper-proof scoring with an LLM-written executive summary.
+- Deterministic, tamper-proof scoring with an LLM-written executive summary — plus a **completeness score** (mandatory documents present vs the chosen template).
 - Human-in-the-loop review: accept AI finding, correct a value (fed back as a few-shot example), approve or reject.
+
+**Service templates & checklists**
+- New Case starts with a **template picker** — 17 real bank services (Full/Partial KYC, savings account, personal/car/MSME/home loan, credit/debit card, cheque book, locker, FASTag, NACH/SI, passbook, dormant reactivation, mobile banking, tax filing), each with a mandatory + optional **document checklist**.
+- Selecting a template opens a two-panel view (checklist + drag-and-drop upload); the chosen template is locked so the agents verify against it.
+- The Documents tab shows the checklist with animated **tick / cross** per required document; the Review scorecard shows **correctness *and* completeness** rings.
 
 **Case management**
 - Unique **16-char reference** per case + an auto-generated human name (e.g. *"Home Loan Application — Ritadhwaj Ray"*).
-- **Edit & retry**: remove/add documents, give a reason, rerun the agents. Every run is audited in a **Run History** with per-field diffs (added / updated / deleted) and the scorecard version it produced.
-- **Exports**: any case scorecard and both activity logs to **Excel & PDF** (filename `*_ddmmyyyyhhmmss` in IST).
+- **Edit & retry** (drag-and-drop): remove/add documents, give a reason, rerun the agents. Every run is audited in a **Run History** with per-field diffs (added / updated / deleted) and the scorecard version it produced.
+- **Exports**: any case scorecard and both activity logs to **Excel & PDF** (filename `*_ddmmyyyyhhmmss` in IST; the PDF's document title matches).
 
 **Dashboards & audit**
 - Server-side **paginated / filterable / sortable** case table (10 / 20 / 30 / 50 rows).
@@ -52,7 +57,7 @@ The process inference is **data-driven**: each business process is a template ro
 - Created-by / last-updated-by tracking with full timestamps.
 
 **Experience**
-- Roles: **uploader**, **reviewer**, and **admin (superuser)** who can do everything.
+- **Role-based access**: **uploader** creates/uploads/retries cases; **reviewer** only reviews and decides (cannot create, upload or retry); **admin** is a superuser who can do everything. Enforced on both the API and the UI.
 - Classy **light/dark theme** with an animated sun↔moon toggle; animated login skyline (flying plane, drifting clouds, day/night) and an office-room sidebar that reacts to the theme.
 - **Live clock** with an interactive **3D globe timezone picker** — real day/night terminator, blinking night-side city lights. Pick any city; every date/time in the app converts to that zone (data is stored canonically in IST).
 
@@ -94,7 +99,7 @@ cleardesk/
 │     │                     #   SkylineScene, OfficeScene, ThemeToggle, Layout, …
 │     ├─ store/             # auth, theme, timezone (zustand)
 │     └─ api/  hooks/
-├─ sample_docs/            # categorized demo bundles (16 bank services)
+├─ sample_docs/            # demo document bundles + generator
 ├─ docs/                   # full system design
 └─ docker-compose.yml      # PostgreSQL
 ```
@@ -103,15 +108,26 @@ cleardesk/
 
 ## Sample documents
 
-`sample_docs/` contains ready-to-demo bundles organized by bank service, with a mix of typed forms, digital PDFs, and simulated handwriting (neat and messy):
+`sample_docs/generate_samples.py` produces demo documents for several people,
+each with scenario variety for testing different verification paths:
+
+```bash
+python sample_docs/generate_samples.py
+```
 
 ```
-home_loan/  kyc_full/  kyc_partial/  new_account/  credit_card/  car_loan/
-personal_loan/  business_loan/  locker_facility/  debit_card/  fastag/
-cheque_book/  dormant_reactivation/  tax_filing/  nach_si_mandate/  passbook/
+sample_docs/
+├─ ritadhwaj_docs/   # DOB mismatch (PAN vs Aadhaar) + name variance
+├─ priya_docs/       # clean / happy path
+├─ mohak_docs/       # messy handwriting + name variance
+└─ meera_docs/       # clean, different city/employer
+    └─ identity/  income/  address/  kyc_full/  new_account/
+       home_loan/  car_loan/  personal_loan/  credit_card/
 ```
 
-Drop any folder's files into **New Case** and the agents infer the matching process automatically.
+Each `income/` folder holds a full income set — payslip, bank statement, Form 16
+(PDF), ITR acknowledgement and a handwritten income declaration. Pick a template
+in **New Case** and drop that person's matching folder in.
 
 ---
 
@@ -150,8 +166,8 @@ Run `python scripts/check_gemini.py` to auto-detect a working Gemini model for y
 
 | Account | Role | Can |
 |---|---|---|
-| `uploader@cleardesk.dev` | uploader | create & submit cases |
-| `reviewer@cleardesk.dev` | reviewer | review & decide cases |
+| `uploader@cleardesk.dev` | uploader | create, upload, run & retry cases |
+| `reviewer@cleardesk.dev` | reviewer | review & decide only (no create/upload/retry) |
 | `admin@cleardesk.dev` | admin (superuser) | everything |
 
 ---

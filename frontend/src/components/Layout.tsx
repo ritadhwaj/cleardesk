@@ -49,7 +49,11 @@ export default function Layout() {
 
           <nav className="flex items-center gap-1">
             {links
-              .filter((l) => l.to !== "/review" || role === "reviewer" || role === "admin")
+              .filter((l) => {
+                if (l.to === "/review") return role === "reviewer" || role === "admin";
+                if (l.to === "/cases/new") return role === "uploader" || role === "admin";
+                return true;   // Dashboard, My Activity — everyone
+              })
               .map(({ to, label, icon: Icon, end }) => (
                 <NavLink key={to} to={to} end={end}
                   className={({ isActive }) =>

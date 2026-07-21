@@ -39,6 +39,17 @@ working Gemini model for a given key.
 
 ### Features added beyond the original plan
 
+- **Service templates & checklists**: `process_templates` model a bank service
+  with a mandatory/optional document checklist (`GET /api/cases/templates`).
+  New Case is a template-picker → checklist + upload flow; the chosen template
+  is locked on the case (agents skip re-inference). The Documents tab renders
+  a live tick/cross checklist and the scorecard carries a **completeness score**
+  (mandatory docs present ÷ required) alongside correctness
+  (`services/scoring.compute_checklist`).
+- **Role-based access**: `require_uploader()` guards create/upload/run/retry to
+  `uploader` + `admin`; review actions require `reviewer` + `admin`; `admin` is
+  a full superuser. Enforced on the API and mirrored in the UI (hidden nav /
+  buttons).
 - **Case identity**: 16-char unique `ref_no` + auto-generated human `name`.
 - **Edit & retry**: resubmit a case (add/remove docs + reason) → reruns agents.
   Each run is audited in `case_runs` with a field-level diff (added/updated/
@@ -63,8 +74,10 @@ working Gemini model for a given key.
 ### Schema delta vs section 3
 
 Added tables: **`case_runs`** (retry audit + field diffs), **`activity_logs`**
-(human action audit). Added `cases` columns: `ref_no`, `name`, `updated_by`.
-Timestamp defaults use `now_ist()` (IST) rather than UTC.
+(human action audit). Added `cases` columns: `ref_no`, `name`, `updated_by`;
+`process_templates.description`; `scorecards.completeness_score` + `checklist`.
+Timestamp defaults use `now_ist()` (IST) rather than UTC. All added columns are
+applied by idempotent `ALTER TABLE … IF NOT EXISTS` mini-migrations at startup.
 
 ### Sample data
 

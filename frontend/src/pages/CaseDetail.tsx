@@ -143,7 +143,9 @@ export default function CaseDetail() {
     : c >= 70 ? "text-amber-600 dark:text-amber-400"
     : "text-red-600 dark:text-red-400";
   const openFlags = detail?.discrepancies.filter((x) => x.resolution === "OPEN").length ?? 0;
-  const canEdit = detail && detail.status !== "PROCESSING";
+  // only uploaders and admins can edit & retry; reviewers can only review
+  const canEdit = detail && detail.status !== "PROCESSING"
+    && (role === "uploader" || role === "admin");
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">

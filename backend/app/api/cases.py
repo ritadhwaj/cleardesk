@@ -18,6 +18,14 @@ from app.services.activity import log_activity
 router = APIRouter()
 
 
+def require_uploader(user: models.User) -> None:
+    """Create / upload / run / retry are uploader (or admin) actions only —
+    reviewers can review but not submit or rerun cases."""
+    if user.role not in ("uploader", "admin"):
+        raise HTTPException(403, "Uploader or admin role required for this action")
+
+
+
 class CaseCreateIn(BaseModel):
     process: str | None = None   # template code chosen by the user, e.g. "CAR_LOAN"
 
@@ -25,6 +33,7 @@ class CaseCreateIn(BaseModel):
 @router.post("")
 def create_case(body: CaseCreateIn | None = None,
                 db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    require_uploader(user)
     case = models.Case(created_by=user.id, status="UPLOADED", updated_by=user.full_name)
     # If the user picked a template up front, lock it in (agents won't re-infer).
     code = (body.process if body else None)
@@ -68,6 +77,7 @@ async def upload_files(
     db: Session = Depends(get_db),
     user: models.User = Depends(current_user),
 ):
+    require_uploader(user)
     case = db.query(models.Case).get(case_id)
     if not case:
         raise HTTPException(404, "Case not found")
@@ -95,6 +105,7 @@ def run_case(
     db: Session = Depends(get_db),
     user: models.User = Depends(current_user),
 ):
+    require_uploader(user)
     case = db.query(models.Case).get(case_id)
     if not case:
         raise HTTPException(404, "Case not found")
@@ -125,6 +136,7 @@ def resubmit_case(
 ):
     """Edit-and-retry: snapshots current fields, wipes the previous analysis,
     and reruns the agents. The CaseRun row audits the retry + resulting diff."""
+    require_uploader(user)
     case = db.query(models.Case).get(case_id)
     if not case:
         raise HTTPException(404, "Case not found")
@@ -164,6 +176,7 @@ def resubmit_case(
 def delete_upload(case_id: uuid.UUID, upload_id: uuid.UUID,
                   db: Session = Depends(get_db),
                   user: models.User = Depends(current_user)):
+    require_uploader(user)
     case = db.query(models.Case).get(case_id)
     if not case:
         raise HTTPException(404, "Case not found")

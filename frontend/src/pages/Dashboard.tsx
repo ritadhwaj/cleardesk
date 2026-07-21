@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FolderOpen, Clock, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import { listCases, fmtDateTime, type CaseSummary } from "../api/client";
 import DataTable, { type Column } from "../components/DataTable";
+import { useAuth } from "../store/auth";
 
 const STATUS_STYLE: Record<string, { chip: string; dot: string }> = {
   UPLOADED:   { chip: "chip-slate",   dot: "bg-slate-400" },
@@ -80,6 +81,8 @@ const COLUMNS: Column<CaseSummary>[] = [
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Record<string, number>>({});
+  const role = useAuth((s) => s.role);
+  const canCreate = role === "uploader" || role === "admin";
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -90,9 +93,11 @@ export default function Dashboard() {
             Every submission, scored by agents and decided by humans.
           </p>
         </div>
-        <Link to="/cases/new" className="btn btn-primary">
-          New case <ArrowRight size={15} />
-        </Link>
+        {canCreate && (
+          <Link to="/cases/new" className="btn btn-primary">
+            New case <ArrowRight size={15} />
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
