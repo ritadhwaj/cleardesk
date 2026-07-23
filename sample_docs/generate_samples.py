@@ -195,7 +195,7 @@ def pdf_doc(path, title, sub, rows):
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     from reportlab.lib.styles import getSampleStyleSheet
     path.parent.mkdir(parents=True, exist_ok=True)
-    doc = SimpleDocTemplate(str(path), pagesize=A4, topMargin=18 * mm, title=title, author="ClearDesk Demo")
+    doc = SimpleDocTemplate(str(path), pagesize=A4, topMargin=18 * mm, title=title, author="VITA Demo")
     s = getSampleStyleSheet()
     story = [Paragraph(title, s["Title"]), Paragraph(sub + " | SPECIMEN - DEMO ONLY", s["Normal"]), Spacer(1, 8 * mm)]
     t = Table(rows, colWidths=[62 * mm, 108 * mm])

@@ -47,7 +47,12 @@ export default function Login() {
           <span className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
             <ShieldCheck size={24} />
           </span>
-          <span className="text-xl font-bold tracking-tight">ClearDesk</span>
+          <div className="leading-none">
+            <span className="block text-xl font-bold tracking-[0.15em]">VITA</span>
+            <span className="block text-[10px] tracking-[0.18em] text-slate-400 uppercase mt-0.5">
+              Verify · Improve · Trust · Audit
+            </span>
+          </div>
         </div>
         {/* text gets a soft backdrop so it stays readable over the network */}
         <div className="relative z-10 space-y-5 max-w-md">
@@ -77,7 +82,7 @@ export default function Login() {
             <span className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
               <ShieldCheck size={20} />
             </span>
-            <span className="text-xl font-bold">ClearDesk</span>
+            <span className="text-xl font-bold tracking-[0.15em]">VITA</span>
           </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight h-page">Welcome back</h2>

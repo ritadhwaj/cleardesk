@@ -50,7 +50,7 @@ def build_table_export(title: str, headers: list, rows: list, fmt: str) -> tuple
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
                             topMargin=14 * mm, bottomMargin=12 * mm,
-                            title=title, author="ClearDesk", creator="ClearDesk")
+                            title=title, author="VITA", creator="VITA")
     styles = getSampleStyleSheet()
     body = [[Paragraph(str(c), styles["BodyText"]) for c in row] for row in rows]
     t = Table([headers] + body, repeatRows=1)
@@ -174,7 +174,7 @@ def _build_xlsx(data: dict) -> bytes:
 
 # ------------------------------------------------------------------ PDF
 
-def _build_pdf(data: dict, doc_title: str = "ClearDesk Case Scorecard") -> bytes:
+def _build_pdf(data: dict, doc_title: str = "VITA Case Scorecard") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
@@ -185,9 +185,9 @@ def _build_pdf(data: dict, doc_title: str = "ClearDesk Case Scorecard") -> bytes
     buf = io.BytesIO()
     # document metadata (title/author) — shown by PDF viewers instead of "anonymous"
     doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=18 * mm, bottomMargin=16 * mm,
-                            title=doc_title, author="ClearDesk", creator="ClearDesk")
+                            title=doc_title, author="VITA", creator="VITA")
     styles = getSampleStyleSheet()
-    story = [Paragraph("ClearDesk — Case Scorecard", styles["Title"]),
+    story = [Paragraph("VITA — Case Scorecard", styles["Title"]),
              Spacer(1, 4 * mm)]
 
     def table(title, headers, rows, widths=None):

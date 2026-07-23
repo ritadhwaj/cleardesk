@@ -1,4 +1,4 @@
-# ClearDesk
+# VITA — Verify · Improve · Trust · Audit
 
 **Multi-Agent Document Verification Desk for Banking** — KYC, loans, cards, tax filing, and 15+ other bank services.
 

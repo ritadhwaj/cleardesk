@@ -1,4 +1,4 @@
-# ClearDesk — Full System Design
+# VITA — Full System Design
 ### Multi-Agent Document Verification Desk for Banking
 
 ---

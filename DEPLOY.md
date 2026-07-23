@@ -1,4 +1,4 @@
-# Deploying ClearDesk (free cloud)
+# Deploying VITA (free cloud)
 
 This repo is set up to deploy as **one Docker service + one Postgres database** on
 **[Render](https://render.com)** (free tier). The Docker image builds the React

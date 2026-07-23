@@ -39,11 +39,11 @@ export default function Layout() {
                              transition-colors duration-500">
               <ShieldCheck size={20} />
             </span>
-            <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-              ClearDesk
+            <span className="text-lg font-bold tracking-[0.15em] text-slate-900 dark:text-white">
+              VITA
             </span>
-            <span className="hidden md:inline text-[11px] font-medium text-slate-400 mt-0.5">
-              Document Verification Desk
+            <span className="hidden md:inline text-[10px] font-medium tracking-wider uppercase text-slate-400 mt-0.5">
+              Verify · Improve · Trust · Audit
             </span>
           </button>
 
@@ -111,7 +111,7 @@ export default function Layout() {
 
       <footer className="relative z-10 border-t border-slate-200/70 dark:border-slate-800/70 py-4 transition-colors duration-500">
         <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-          ClearDesk · AI reads the pages, humans make the decisions · Demo build
+          VITA · AI reads the pages, humans make the decisions · Demo build
         </p>
       </footer>
     </div>

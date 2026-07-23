@@ -10,7 +10,7 @@ from app.config import settings
 from app.db.session import engine
 from app.db import models
 
-app = FastAPI(title="ClearDesk API", version="0.1.0")
+app = FastAPI(title="VITA API", version="0.1.0")
 
 # Auth uses Bearer tokens (no cookies), so a wildcard origin is safe. In a
 # same-origin deployment (backend serves the SPA) CORS is not even exercised.
