@@ -182,4 +182,17 @@ step-by-step (plus Neon/Railway/Fly.io options): **[`DEPLOY.md`](DEPLOY.md)**.
 
 ## Docs
 
-Full system design — architecture, database schema, APIs, agent protocol, and demo script: [`docs/cleardesk-system-design.md`](docs/cleardesk-system-design.md)
+Enterprise documentation set (architecture review, reverse-engineered from the code) lives in
+[`docs/`](docs/README.md):
+
+- **[docs/README.md](docs/README.md)** — documentation index & system-at-a-glance
+- **[Architecture](docs/architecture/Architecture.md)** — style, high-level, C4, module/package, request & data flow
+- **[Decision Log](docs/architecture/DecisionLog.md)** — ADRs
+- **[Diagrams](docs/diagrams/sequence-diagrams.md)** — sequence, class, external-integration diagrams
+- **[Database](docs/database/Database.md)** — ER diagram, schema, JSONB shapes, lifecycle
+- **[API](docs/api/APIDocumentation.md)** — every REST + WebSocket endpoint
+- **[Security](docs/security/Security.md)** — AuthN/AuthZ, JWT, RBAC, secrets, threat notes
+- **[Deployment](docs/deployment/DeploymentGuide.md)** & **[Operations](docs/deployment/OperationsGuide.md)** — topology, config, logging, monitoring, performance, troubleshooting
+- **[Developer Guide](docs/developer/DeveloperGuide.md)** — setup, standards, contributing, glossary, FAQ
+
+Original single-file system design (kept for reference): [`docs/cleardesk-system-design.md`](docs/cleardesk-system-design.md)
